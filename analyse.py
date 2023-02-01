@@ -4,7 +4,6 @@ import indicators as ind
 import utilities as u
 
 
-
 def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py, dic_ind):
     indicator_results = ind.create_indicator_results()
     # dic_ind.setdefault(y, )
@@ -57,8 +56,6 @@ def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py
     net_income = ind.net_income(y, isy)
     research_development = ind.research_development(y, isy)
 
-
-
     # ind_list = [price, roe, retained_earnings, stopa_wzrostu, roa, roc, roce, roic, wacc, gross_margin,
     #                 ebitda_margin, ebit_margin, net_margin, d_e_ratio, td_ta_ratio, capex_revenue_ratio,
     #                altman_z_score, beneish_m_score, current_ratio, p_s_ratio, p_e_ratio, eps, peg, dscr, cash_ratio,
@@ -86,6 +83,8 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price, all_years, 
                        'Sales/Revenue', 'Gross income', 'EBIT', 'EBITDA', 'Net income',
                        'Development&Research']}
 
+    # years
+    ind.period_type = 'year'                                             #ustawienie okresu dla obliczen
     for n in range(len(all_years)):
         y = all_years[n]
         py = all_years[n - 1] if n != 0 else None
@@ -99,6 +98,14 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price, all_years, 
         cols = list(df.columns)
         cols = [cols[-1]] + cols[:-1]
         df = df[cols]
+
+    # quarters
+    #print(all_quarters)
+    ind.period_type = 'quarter'                                           #ustawienie okresu dla obliczen
+    for n in range(len(all_quarters)):
+        if n >= 3:
+            qs_l = [all_quarters[n], all_quarters[n-1], all_quarters[n-2], all_quarters[n-3]]
+
 
     #jednorazowe
     # dane dla indeksu

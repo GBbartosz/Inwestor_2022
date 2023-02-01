@@ -4,6 +4,7 @@ def create_indicator_results():
     return indicator_results
 
 
+period_type = None
 indicator_results = create_indicator_results()
 
 def is_null(func):
@@ -30,6 +31,13 @@ def return_indicator_results():
     return indicator_results
 
 
+def sum_quarters(period_l, indicator_class):
+    total = 0
+    for period in period_l:
+        total += indicator_class.val(period)
+    return total
+
+
 @is_null
 def price(price):
     return price
@@ -37,7 +45,13 @@ def price(price):
 
 @is_null
 def nopat(y, isy):
-    nopat = isy.EBIT.val(y) - isy.Income_Tax.val(y)
+    if period_type == 'year':
+        ebit = isy.EBIT.val(y)
+        income_tax = isy.Income_Tax.val(y)
+    if period_type == 'quarter':
+        ebit = sum_quarters(y, isy.EBIT)
+        income_tax = sum_quarters(y, isy.Income_Tax)
+    nopat = ebit - income_tax
     return nopat
 
 

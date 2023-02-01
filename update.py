@@ -22,7 +22,7 @@ def check_if_tables_exists(table, sql_table_list):
 
 def check_if_columns_are_current(web_headers_names, sql_headers_names, lacking_column_names):
     for web_header in web_headers_names:
-        if web_header not in sql_headers_names:
+        if web_header not in sql_headers_names and 'All values' not in web_header:
             lacking_column_names.append(web_header)
     return lacking_column_names
 
@@ -35,7 +35,7 @@ def inside_apostrophe(word):
 def download_and_prepare_price_history(ticker, frequency):
     global unsuccessful
     data_downloaded = False
-    while data_downloaded == False:
+    while data_downloaded is False:
         try:
             df = pd.DataFrame()
             tic = yf.Ticker(ticker)
@@ -52,7 +52,7 @@ def download_and_prepare_price_history(ticker, frequency):
         df.sort_values('Date', ascending=False, inplace=True)
         df.drop(index=df.index[0], axis=0, inplace=True)
     df.reset_index(drop=False, inplace=True)
-    df['Date'] = df['Date'].apply(lambda x: str(dt.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S').date()))
+    df['Date'] = df['Date'].apply(lambda x: str(dt.datetime.strptime(str(x)[:-6], '%Y-%m-%d %H:%M:%S').date()))
     #df['Date'] = df['Date'].apply(lambda x: str(x)[:10])
     df.dropna(inplace=True)
     #for col in df.columns:
@@ -361,7 +361,8 @@ def update_profile(ticker, url_check_list):
 def update_price(ticker):
     cursor, wsj_conn, engine = u.create_sql_connection()
     sql_table_list = u.get_all_tables(cursor)
-    frequencies = ['1mo', '1d']
+    # frequencies = ['1mo', '1d']  # nie wyszukuje 1mo
+    frequencies = ['1d']
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
 

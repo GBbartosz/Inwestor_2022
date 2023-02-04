@@ -376,7 +376,7 @@ def update_price(ticker):
                 if price_df_sql.iloc[0, 0] == price_df_url.iloc[0, 0]:
                     pass
                 else:
-                    df_diff = pd.concat([price_df_url, price_df_sql]).drop_duplicates(keep=False)
+                    df_diff = pd.concat([price_df_url, price_df_sql]).drop_duplicates(subset='Date', keep=False) # yahoo zmienia dane i w efekcie daty się duplikują, konieczny subset
                     df_diff.reset_index(drop=True, inplace=True)
                     #print(df_diff)
                     for r in df_diff.index:
@@ -385,9 +385,10 @@ def update_price(ticker):
                             insert_values.append(df_diff[c].iloc[r])
                         insert_values_without_str = insert_values[2:]
                         if any(np.isnan(x) for x in insert_values_without_str) is False:
-                            sql_insert = 'INSERT INTO [{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
-                                         'VALUES ({1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values)
+                            sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
+                                         'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values)
                             cursor.execute(sql_insert)
+                            cursor.commit()
             else:
                 price_df = download_and_prepare_price_history(ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)

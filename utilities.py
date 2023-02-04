@@ -283,61 +283,103 @@ class Indicator(object):
 
 
 class Price():
-    def __init__(self, tic, years_list, fiscal_year_end, price_df_m, price_df_d):
-        self.m = None
-        self.d = None
-        prop = ['max', 'min', 'open', 'close', 'current']
-        setattr(self, 'm', Price_atr(tic, prop, years_list, price_df_m, fiscal_year_end, 'm'))
-        setattr(self, 'd', Price_atr(tic, prop, years_list, price_df_d, fiscal_year_end, 'd'))
-
-
-# poprawic klasy price
-class Price_atr():
-    def __init__(self, tic, prop, years_list, price_df, fiscal_year_end, frequency):
+    # def __init__(self, tic, years_list, fiscal_year_end, price_df_m, price_df_d):
+    def __init__(self, tic, periods_list, fiscal_year_end, price_df, frequency):
         self.max = None
         self.min = None
         self.open = None
         self.close = None
         self.current = None
+        prop = ['max', 'min', 'open', 'close', 'current']
         for p in prop:
             if p == 'current':
                 val = current_price_download(tic)
                 self.current = float(val)
             else:
-                setattr(self, p, Price_year(p, years_list, price_df, fiscal_year_end, frequency))
+                setattr(self, p, Price_year_quarter(p, periods_list, price_df, fiscal_year_end, frequency))
 
     def __float__(self, val):
         return self.current
 
 
-class Price_year():
+class Price_year_quarter():
     #sciagnely sie zbyt krotkie tabele - powod bledu
     # trzeba usunac wiersze z NaN - nie przeszkadzaja ale nie potrzebne w miesiacach
-    def __init__(self, p, years_list, price_df, fiscal_year_end, frequency):
-        for year in years_list:
-            initial_date = '{0}-{1}-{2}'.format(year, fiscal_year_end, '01')
-            if frequency == 'm':
-                fiscal_y_start = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(years=-1, months=1)
-                fiscal_y_end = dt.datetime.strptime(initial_date, '%Y-%m-%d')
-            if frequency == 'd':
+    def __init__(self, p, periods_list, price_df, fiscal_year_end, frequency):
+        if frequency == 'q':
+            month_dict = {'Jan': '01',
+                          'Feb': '02',
+                          'Mar': '03',
+                          'Apr': '04',
+                          'May': '05',
+                          'Jun': '06',
+                          'Jul': '07',
+                          'Aug': '08',
+                          'Sep': '09',
+                          'Oct': '10',
+                          'Nov': '11',
+                          'Dec': '12'
+                          }
+            for quarter in periods_list:
+                #quarter_end = transform_quarter(quarter, 'end')
+                #quarter_start = transform_quarter(quarter, 'start')
+                year = quarter[-4:]
+                month_name = quarter[3:6]
+                month_num = month_dict[month_name]
+                day = quarter[:2]
+                quarter_end = '{0}-{1}-{2}'.format(year, month_num, day)
+                quarter_end = dt.datetime.strptime(quarter_end, '%Y-%m-%d')
+
+                quarter_start = quarter_end + pd.DateOffset(months=-2)
+                quarter_start = str(quarter_start)[:8] + '01'
+                quarter_start = dt.datetime.strptime(quarter_start, '%Y-%m-%d')
+
+                quarter_end_ind = find_index_of_date(quarter_start, price_df)
+                quarter_start_ind = find_index_of_date(quarter_end, price_df)
+                # print('start')
+                # print(quarter_start)
+                # print(quarter_start_ind)
+                # print('end')
+                # print(quarter_end)
+                # print(quarter_end_ind)
+
+                df = price_df.iloc[quarter_start_ind:quarter_end_ind, :]
+                if p == 'max':
+                    val = df['High'].max()
+                elif p == 'min':
+                    val = df['Low'].min()
+                elif p == 'open':
+                    val = df.loc[:, 'Open'].iloc[-1]
+                elif p == 'close':
+                    val = df.loc[:, 'Close'].iloc[0]
+                val = float(val)
+                setattr(self, str(quarter), val)
+
+        if frequency == 'y':
+            for year in periods_list:
+                initial_date = '{0}-{1}-{2}'.format(year, fiscal_year_end, '01')
+                # if frequency == 'm':
+                #     fiscal_y_start = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(years=-1, months=1)
+                #     fiscal_y_end = dt.datetime.strptime(initial_date, '%Y-%m-%d')
+
                 fiscal_y_start = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(years=-1, months=1)
                 fiscal_y_end = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(months=1, days=-1)
-            start_fiscal_year_ind = find_index_of_date(fiscal_y_start, price_df)
-            end_fiscal_year_ind = find_index_of_date(fiscal_y_end, price_df)
-            df = price_df.iloc[end_fiscal_year_ind:start_fiscal_year_ind, :]
-            if p == 'max':
-                val = df['High'].max()
-            elif p == 'min':
-                val = df['Low'].min()
-            elif p == 'open':
-                val = df.loc[:, 'Open'].iloc[-1]
-            elif p == 'close':
-                val = df.loc[:, 'Close'].iloc[0]
-            val = float(val)
-            setattr(self, str(year), val)
+                start_fiscal_year_ind = find_index_of_date(fiscal_y_start, price_df)
+                end_fiscal_year_ind = find_index_of_date(fiscal_y_end, price_df)
+                df = price_df.iloc[end_fiscal_year_ind:start_fiscal_year_ind, :]
+                if p == 'max':
+                    val = df['High'].max()
+                elif p == 'min':
+                    val = df['Low'].min()
+                elif p == 'open':
+                    val = df.loc[:, 'Open'].iloc[-1]
+                elif p == 'close':
+                    val = df.loc[:, 'Close'].iloc[0]
+                val = float(val)
+                setattr(self, str(year), val)
 
-    def val(self, year):
-        return getattr(self, year)
+    def val(self, period):
+        return getattr(self, period)
 
 
 def create_sql_connection():
@@ -424,11 +466,9 @@ def classes_from_sql(ticker):
             cfq = CashFlow(ind_name_list, ind_enumerate_list, years_list, df)
         num += 1
 
-
-
-    ticker_price_history = ticker + '_price_history_1mo'
-    sql_select_all = 'SELECT * FROM {}'.format(ticker_price_history)
-    price_df = pd.read_sql(sql_select_all, wsj_conn)
+    # ticker_price_history = ticker + '_price_history_1mo'
+    # sql_select_all = 'SELECT * FROM {}'.format(ticker_price_history)
+    # price_df = pd.read_sql(sql_select_all, wsj_conn)
 
     ticker_profile = ticker + '_profile'
     sql_select_all = 'SELECT * FROM {}'.format(ticker_profile)
@@ -437,11 +477,14 @@ def classes_from_sql(ticker):
                  'Jul': [7, 31], 'Aug': [8, 31], 'Sep': [9, 30], 'Oct': [10, 31], 'Nov': [11, 30], 'Dec': [12, 31]}
     fiscal_year_end = df.loc[0, 'Fiscal Year Ends'][0:3]
     fiscal_year_end = month_num[fiscal_year_end][0]
-    price_df_m, price_df_d, all_years = create_price_dfs(ticker, all_years_statements, fiscal_year_end)
-    price = Price(ticker, all_years, fiscal_year_end, price_df_m, price_df_d)
+    # price_df_m, price_df_d, all_years = create_price_dfs(ticker, all_years_statements, fiscal_year_end)
+    price_df_d, all_years = create_price_dfs(ticker, all_years_statements, fiscal_year_end)
+    # price = Price(ticker, all_years, fiscal_year_end, price_df_m, price_df_d)
+    price_y = Price(ticker, all_years, fiscal_year_end, price_df_d, 'y')
+    price_q = Price(ticker, all_quarters, fiscal_year_end, price_df_d, 'q')
 
     wsj_conn.close()
-    return isy, isq, bay, baq, bly, blq, cfy, cfq, price, all_years, all_quarters
+    return isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters
 
 
 def get_all_tables(cursor):
@@ -473,13 +516,17 @@ def find_index_of_date(mydate, df):
 
 
 def create_price_dfs(ticker, all_years_statements, fiscal_year_end):
-    ticker_price_history_m = ticker + '_price_history_1mo'
-    ticker_price_history_d = ticker + '_price_history_1d'
+
     cursor, wsj_conn, engine = create_sql_connection()
-    sql_select_all_m = 'SELECT * FROM {0}'.format(ticker_price_history_m)
-    sql_select_all_d = 'SELECT * FROM {0}'.format(ticker_price_history_d)
-    price_df_m = pd.read_sql(sql_select_all_m, wsj_conn)
+
+    # ticker_price_history_m = ticker + '_price_history_1mo'
+    # sql_select_all_m = 'SELECT * FROM {0}'.format(ticker_price_history_m)
+    # price_df_m = pd.read_sql(sql_select_all_m, wsj_conn)
+
+    ticker_price_history_d = ticker + '_price_history_1d'
+    sql_select_all_d = 'SELECT * FROM {0} order by date desc'.format(ticker_price_history_d)
     price_df_d = pd.read_sql(sql_select_all_d, wsj_conn)
+
     wsj_conn.close()
     st = dt.datetime.now()
     all_years = []
@@ -488,7 +535,13 @@ def create_price_dfs(ticker, all_years_statements, fiscal_year_end):
     for y in all_years_statements:
         one_year_months = []
         for m in months:
-            one_year_months.append(str(dt.date(int(y), m, 1)))
-        if all(x in price_df_m['Date'].values for x in one_year_months) is True:
+            # one_year_months.append(str(dt.date(int(y), m, 1)))
+            one_year_months.append(str(dt.date(int(y), m, 1))[:7])
+        # if all(x in price_df_m['Date'].values for x in one_year_months) is True:
+        #    all_years.append(y)
+        price_date_l = price_df_d['Date'].values.tolist()
+        price_date_l = [x[:7] for x in price_date_l]
+        if all(x in price_date_l for x in one_year_months) is True:
             all_years.append(y)
-    return price_df_m, price_df_d, all_years
+    # return price_df_m, price_df_d, all_years
+    return price_df_d, all_years

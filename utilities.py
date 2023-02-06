@@ -15,7 +15,7 @@ def get_rid_of_special_characters(word):
         if char in word:
             word = word.replace(char, '_')
     if word[-1] == '_':
-        word = word[:-2]
+        word = word[:-1]
     if word[0] == '_':
         word = word[1:]
     return word
@@ -82,10 +82,10 @@ class IncomeStatement(object):
         self.Net_Income_After_Extraordinaries = None
         self.Preferred_Dividends = None
         self.Net_Income_Available_to_Common = None
-        self.EPS_Basi = None
+        self.EPS_Basic = None
         self.EPS_Basic_Growth = None
         self.Basic_Shares_Outstanding = None
-        self.EPS_Dilute = None
+        self.EPS_Diluted = None
         self.EPS_Diluted_Growth = None
         self.Diluted_Shares_Outstanding = None
         self.EBITDA = None

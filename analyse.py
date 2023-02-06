@@ -42,7 +42,7 @@ def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py
 
     p_e_ratio = ind.p_e_ratio(y, isy, isq, price)
     eps = ind.eps(y, isy, isq)
-    peg = ind.peg(y, eps, isy, isq, price)
+    peg = ind.peg(y, py, eps, isy, isq, price)
 
     dscr = ind.debt_service_coverage_ratio(y, isy, isq)
     cash_ratio = ind.cash_ratio(y, bay, bly, baq, blq)
@@ -104,14 +104,9 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, 
         df_y = df_y[cols]
 
     # quarters
-    #print(all_quarters)
     ind.period_type = 'quarter'                                           #ustawienie okresu dla obliczen
     dic_ind_q = dic_ind
-    print('dicind')
-    print(dic_ind_q)
     for n in range(len(all_quarters)):
-        print('price')
-        print(price_q.close.val(all_quarters[n]))
         if n >= 3:
             qs_l = [all_quarters[n], all_quarters[n-1], all_quarters[n-2], all_quarters[n-3]]
             qs_l_py = [all_quarters[n-4], all_quarters[n-5], all_quarters[n-6], all_quarters[n-7]] if n >= 7 else None
@@ -120,7 +115,6 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, 
             if n == len(all_years) - 1:
                 dic_ind_q = calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price_q.current, qs_l, qs_l_py, dic_ind_q)
                 df_q = pd.DataFrame(dic_ind_q)
-            print(dic_ind_q)
     if update_global is False:          # dodanie tickera i ustawienie na poczatku
         df_q['Ticker'] = ticker
         cols = list(df_q.columns)

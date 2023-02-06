@@ -51,6 +51,10 @@ def nopat(y, isy, isq):
     elif period_type == 'quarter':
         ebit = sum_quarters(y, isq.EBIT)
         income_tax = sum_quarters(y, isq.Income_Tax)
+    print('ebit')
+    print(ebit)
+    print('income tax')
+    print(income_tax)
     nopat = ebit - income_tax
     return nopat
 
@@ -61,8 +65,10 @@ def total_debt(y, bly, blq):
         short_term_debt = bly.Short_Term_Debt.val(y)
         long_term_debt = bly.Long_Term_Debt.val(y)
     elif period_type == 'quarter':
-        short_term_debt = sum_quarters(y, blq.Short_Term_Debt)
-        long_term_debt = sum_quarters(y, blq.Long_Term_Debt)
+        short_term_debt = blq.Short_Term_Debt.val(y[0])
+        long_term_debt = blq.Long_Term_Debt.val(y[0])
+        # short_term_debt = sum_quarters(y, blq.Short_Term_Debt)
+        # long_term_debt = sum_quarters(y, blq.Long_Term_Debt)
     total_debt = short_term_debt + long_term_debt
     return total_debt
 
@@ -82,7 +88,9 @@ def roe(y, isy, bly, isq, blq):
         total_equity = bly.Total_Equity.val(y)
     elif period_type == 'quarter':
         net_income = sum_quarters(y, isq.Net_Income)
-        total_equity = sum_quarters(y, blq.Total_Equity)
+        total_equity = blq.Total_Equity.val(y[0])
+        # net_income = sum_quarters(y, isq.Net_Income)
+        # total_equity = sum_quarters(y, blq.Total_Equity)
     roe = net_income / total_equity
     return roe
 
@@ -95,7 +103,8 @@ def retained_earnings(y, bly, isy, blq, isq):
         dividends_payable = bly.Dividends_Payable.val(y)
         net_income = isy.Net_Income.val(y)
     elif period_type == 'quarter':
-        dividends_payable = sum_quarters(y, blq.Dividends_Payable)
+        dividends_payable = blq.Dividends_Payable.val(y[0])
+        # dividends_payable = sum_quarters(y, blq.Dividends_Payable)
         net_income = sum_quarters(y, isq.Net_Income)
     retained_earnings = 1 - (dividends_payable / net_income)
     return retained_earnings
@@ -120,7 +129,8 @@ def roa(y, isy, bay, isq, baq):
         total_assets = bay.Total_Assets.val(y)
     elif period_type == 'quarter':
         net_income = sum_quarters(y, isq.Net_Income)
-        total_assets = sum_quarters(y, baq.Total_Assets)
+        # total_assets = sum_quarters(y, baq.Total_Assets)
+        total_assets = baq.Total_Assets.val(y[0])
     roa = net_income / total_assets
     return roa
 
@@ -133,7 +143,7 @@ def roc(y, isy, bly, isq, blq):
         total_equity = bly.Total_Equity.val(y)
     elif period_type == 'quarter':
         ebit = sum_quarters(y, isq.EBIT)
-        total_equity = sum_quarters(y, blq.Total_Equity)
+        total_equity = blq.Total_Equity.val(y[0])
     roc = ebit / total_equity
     return roc
 
@@ -149,8 +159,8 @@ def roce(y, isy, bay, bly, isq, baq, blq):
         total_current_liabilities = bly.Total_Current_Liabilities.val(y)
     elif period_type == 'quarter':
         ebit = sum_quarters(y, isq.EBIT)
-        total_assets = sum_quarters(y, baq.Total_Assets)
-        total_current_liabilities = sum_quarters(y, blq.Total_Current_Liabilities)
+        total_assets = baq.Total_Assets.val(y[0])
+        total_current_liabilities = blq.Total_Current_Liabilities.val(y[0])
     roce = ebit / (total_assets - total_current_liabilities)
     return roce
 
@@ -164,10 +174,10 @@ def roic(y, bay, bly, baq, blq, nopat, total_debt):
         cash_only = bay.Cash_Only.val(y)
         total_equity = bly.Total_Equity.val(y)
     elif period_type == 'quarter':
-        dividends_payable = sum_quarters(y, blq.Dividends_Payable)
-        leases = sum_quarters(y, baq.Leases)
-        cash_only = sum_quarters(y, baq.Cash_Only)
-        total_equity = sum_quarters(y, blq.Total_Equity)
+        dividends_payable = blq.Dividends_Payable.val(y[0])
+        leases = baq.Leases.val(y[0])
+        cash_only = baq.Cash_Only.val(y[0])
+        total_equity = blq.Total_Equity.val(y[0])
     roic = (nopat - dividends_payable) / (total_debt - cash_only + total_equity)
     return roic
 
@@ -280,8 +290,10 @@ def debt_to_equity_ratio(y, bly, blq):
         total_liabilities = bly.Total_Liabilities.val(y)
         total_shareholders_equity = bly.Total_Shareholders_Equity.val(y)
     elif period_type == 'quarter':
-        total_liabilities = sum_quarters(y, blq.Total_Liabilities)
-        total_shareholders_equity = sum_quarters(y, blq.Total_Shareholders_Equity)
+        # total_liabilities = sum_quarters(y, blq.Total_Liabilities)
+        # total_shareholders_equity = sum_quarters(y, blq.Total_Shareholders_Equity)
+        total_liabilities = blq.Total_Liabilities.val(y[0])
+        total_shareholders_equity = blq.Total_Shareholders_Equity.val(y[0])
     d_e_ratio = total_liabilities / total_shareholders_equity
     return d_e_ratio
 
@@ -298,8 +310,10 @@ def total_debt_to_total_assets_ratio(y, bay, bly, baq, blq):
         total_liabilities = bly.Total_Liabilities.val(y)
         total_assets = bay.Total_Assets.val(y)
     elif period_type == 'quarter':
-        total_liabilities = sum_quarters(y, blq.Total_Liabilities)
-        total_assets = sum_quarters(y, baq.Total_Assets)
+        # total_liabilities = sum_quarters(y, blq.Total_Liabilities)
+        # total_assets = sum_quarters(y, baq.Total_Assets)
+        total_liabilities = blq.Total_Liabilities.val(y[0])
+        total_assets = baq.Total_Assets.val(y[0])
     td_ta = total_liabilities / total_assets
     return td_ta
 
@@ -317,10 +331,14 @@ def capex_to_revenue_ratio(n, y, py, isy, bay, isq, baq):
             accumulated_depreciation_py = bay.Accumulated_Depreciation.val(py)
             sales_revenue = isy.Sales_Revenue.val(y)
         elif period_type == 'quarter':
-            property_plant_equipment_gross_y = sum_quarters(y, baq.Property_Plant_Equipment_Gross)
-            property_plant_equipment_gross_py = sum_quarters(py, baq.Property_Plant_Equipment_Gross)
-            accumulated_depreciation_y = sum_quarters(y, baq.Accumulated_Depreciation)
-            accumulated_depreciation_py = sum_quarters(py, baq.Accumulated_Depreciation)
+            # property_plant_equipment_gross_y = sum_quarters(y, baq.Property_Plant_Equipment_Gross)
+            # property_plant_equipment_gross_py = sum_quarters(py, baq.Property_Plant_Equipment_Gross)
+            # accumulated_depreciation_y = sum_quarters(y, baq.Accumulated_Depreciation)
+            # accumulated_depreciation_py = sum_quarters(py, baq.Accumulated_Depreciation)
+            property_plant_equipment_gross_y = baq.Property_Plant_Equipment_Gross.val(y[0])
+            property_plant_equipment_gross_py = baq.Property_Plant_Equipment_Gross.val(py[0])
+            accumulated_depreciation_y = baq.Accumulated_Depreciation.val(y[0])
+            accumulated_depreciation_py = baq.Accumulated_Depreciation.val(py[0])
             sales_revenue = sum_quarters(y, isq.Sales_Revenue)
 
         capex = (property_plant_equipment_gross_y - property_plant_equipment_gross_py) \
@@ -354,19 +372,24 @@ def altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price):
         total_liabilities = bly.Total_Liabilities.val(y)
         sales_revenue = isy.Sales_Revenue.val(y)
     elif period_type == 'quarter':
-        total_current_assets = sum_quarters(y, baq.Total_Current_Assets)
-        total_current_liabilities = sum_quarters(y, blq.Total_Current_Liabilities)
-        total_assets = sum_quarters(y, baq.Total_Assets)
+        # total_current_assets = sum_quarters(y, baq.Total_Current_Assets)
+        # total_current_liabilities = sum_quarters(y, blq.Total_Current_Liabilities)
+        # total_assets = sum_quarters(y, baq.Total_Assets)
+        total_current_assets = baq.Total_Current_Assets.val(y[0])
+        total_current_liabilities = blq.Total_Current_Liabilities.val(y[0])
+        total_assets = baq.Total_Assets.val(y[0])
         net_income = sum_quarters(y, isq.Net_Income)
         ebit = sum_quarters(y, isq.EBIT)
-        diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
-        total_liabilities = sum_quarters(y, blq.Total_Liabilities)
+        # diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
+        # total_liabilities = sum_quarters(y, blq.Total_Liabilities)
+        diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
+        total_liabilities = blq.Total_Liabilities.val(y[0])
         sales_revenue = sum_quarters(y, isq.Sales_Revenue)
 
     X = (total_current_assets - total_current_liabilities) / total_assets
     Y = net_income * retained_earnings / total_assets
     V = ebit / total_assets
-    B = price * diluted_shares_outstanding / total_current_liabilities
+    B = price * diluted_shares_outstanding / total_liabilities
     Q = sales_revenue / total_assets
 
     #X = (bay.Total_Current_Assets.val(y) - bly.Total_Current_Liabilities.val(y)) / bay.Total_Assets.val(y)
@@ -407,28 +430,40 @@ def beneish_m_score(n, y, py, isy, bay, bly, cfy, isq, baq, blq, cfq):
             total_assets_y = bay.Total_Assets.val(y)
             total_assets_py = bay.Total_Assets.val(py)
         elif period_type == 'quarter':
-            accounts_receivables_net_y = sum_quarters(y, baq.Accounts_Receivables_Net)
-            accounts_receivables_net_py = sum_quarters(py, baq.Accounts_Receivables_Net)
+            # accounts_receivables_net_y = sum_quarters(y, baq.Accounts_Receivables_Net)
+            # accounts_receivables_net_py = sum_quarters(py, baq.Accounts_Receivables_Net)
+            accounts_receivables_net_y = baq.Accounts_Receivables_Net.val(y[0])
+            accounts_receivables_net_py = baq.Accounts_Receivables_Net.val(py[0])
             sales_revenue_y = sum_quarters(y, isq.Sales_Revenue)
             sales_revenue_py = sum_quarters(py, isq.Sales_Revenue)
             cogs_exluding_d_a_y = sum_quarters(y, isq.COGS_excluding_D_A)
             cogs_exluding_d_a_py = sum_quarters(py, isq.COGS_excluding_D_A)
-            total_current_assets_y = sum_quarters(y, baq.Total_Current_Assets)
-            total_current_assets_py = sum_quarters(py, baq.Total_Current_Assets)
-            net_property_plant_equipment_y = sum_quarters(y, baq.Net_Property_Plant_Equipment)
-            net_property_plant_equipment_py = sum_quarters(py, baq.Net_Property_Plant_Equipment)
+            # total_current_assets_y = sum_quarters(y, baq.Total_Current_Assets)
+            # total_current_assets_py = sum_quarters(py, baq.Total_Current_Assets)
+            total_current_assets_y = baq.Total_Current_Assets.val(y[0])
+            total_current_assets_py = baq.Total_Current_Assets.val(py[0])
+            # net_property_plant_equipment_y = sum_quarters(y, baq.Net_Property_Plant_Equipment)
+            # net_property_plant_equipment_py = sum_quarters(py, baq.Net_Property_Plant_Equipment)
+            net_property_plant_equipment_y = baq.Net_Property_Plant_Equipment.val(y[0])
+            net_property_plant_equipment_py = baq.Net_Property_Plant_Equipment.val(py[0])
             depreciation_y = sum_quarters(y, isq.Depreciation)
             depraciation_py = sum_quarters(py, isq.Depreciation)
             sg_a_expense_y = sum_quarters(y, isq.SG_A_Expense)
             sg_a_expense_py = sum_quarters(py, isq.SG_A_Expense)
-            total_current_liabilities_y = sum_quarters(y, blq.Total_Current_Liabilities)
-            total_current_liabilities_py = sum_quarters(py, blq.Total_Current_Liabilities)
-            long_term_debt_y = sum_quarters(y, blq.Long_Term_Debt)
-            long_term_debt_py = sum_quarters(py, blq.Long_Term_Debt)
+            # total_current_liabilities_y = sum_quarters(y, blq.Total_Current_Liabilities)
+            # total_current_liabilities_py = sum_quarters(py, blq.Total_Current_Liabilities)
+            total_current_liabilities_y = blq.Total_Current_Liabilities.val(y[0])
+            total_current_liabilities_py = blq.Total_Current_Liabilities.val(py[0])
+            # long_term_debt_y = sum_quarters(y, blq.Long_Term_Debt)
+            # long_term_debt_py = sum_quarters(py, blq.Long_Term_Debt)
+            long_term_debt_y = blq.Long_Term_Debt.val(y[0])
+            long_term_debt_py = blq.Long_Term_Debt.val(py[0])
             net_income_y = sum_quarters(y, isq.Net_Income)
             net_operationg_cash_flow_y = sum_quarters(y, cfq.Net_Operating_Cash_Flow)
-            total_assets_y = sum_quarters(y, baq.Total_Assets)
-            total_assets_py = sum_quarters(py, baq.Total_Assets)
+            # total_assets_y = sum_quarters(y, baq.Total_Assets)
+            # total_assets_py = sum_quarters(py, baq.Total_Assets)
+            total_assets_y = baq.Total_Assets.val(y[0])
+            total_assets_py = baq.Total_Assets.val(py[0])
 
         DSRI = (accounts_receivables_net_y / sales_revenue_y) / (accounts_receivables_net_py / sales_revenue_py)
         GMI = ((sales_revenue_py - cogs_exluding_d_a_py) / sales_revenue_py) / ((sales_revenue_y - cogs_exluding_d_a_y) / sales_revenue_y)
@@ -455,11 +490,14 @@ def sloan_ratio(y, py, isy, bay, cfy, isq, baq, cfq):
             net_operationg_cash_flow_y = cfy.Net_Operating_Cash_Flow.val(y)
             total_assets_y = bay.Total_Assets.val(y)
         elif period_type == 'quarter':
-            net_property_plant_equipment_y = sum_quarters(y, baq.Net_Property_Plant_Equipment)
-            net_property_plant_equipment_py = sum_quarters(py, baq.Net_Property_Plant_Equipment)
+            # net_property_plant_equipment_y = sum_quarters(y, baq.Net_Property_Plant_Equipment)
+            # net_property_plant_equipment_py = sum_quarters(py, baq.Net_Property_Plant_Equipment)
+            net_property_plant_equipment_y = baq.Net_Property_Plant_Equipment.val(y[0])
+            net_property_plant_equipment_py = baq.Net_Property_Plant_Equipment.val(py[0])
             net_income_y = sum_quarters(y, isq.Net_Income)
             net_operationg_cash_flow_y = sum_quarters(y, cfq.Net_Operating_Cash_Flow)
-            total_assets_y = sum_quarters(y, baq.Total_Assets)
+            # total_assets_y = sum_quarters(y, baq.Total_Assets)
+            total_assets_y = baq.Total_Assets.val(y[0])
 
         cfi = net_property_plant_equipment_y - net_property_plant_equipment_py
         sloan_ratio = (net_income_y - net_operationg_cash_flow_y - cfi) / total_assets_y
@@ -474,8 +512,8 @@ def current_ratio(y, bay, bly, baq, blq):
         total_current_assets_y = bay.Total_Current_Assets.val(y)
         total_current_liabilities_y = bly.Total_Current_Liabilities.val(y)
     elif period_type == 'quarter':
-        total_current_assets_y = sum_quarters(y, baq.Total_Current_Assets)
-        total_current_liabilities_y = sum_quarters(y, blq.Total_Current_Liabilities)
+        total_current_assets_y = baq.Total_Current_Assets.val(y[0])
+        total_current_liabilities_y = blq.Total_Current_Liabilities.val(y[0])
 
     current_ratio = total_current_assets_y / total_current_liabilities_y
     return current_ratio
@@ -492,7 +530,7 @@ def p_s_ratio(y, isy, isq, price):
         diluted_shares_outstanding = isy.Diluted_Shares_Outstanding.val(y)
     elif period_type == 'quarter':
         sales_revenue = sum_quarters(y, isq.Sales_Revenue)
-        diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
+        diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
 
     p_s = price / (sales_revenue / diluted_shares_outstanding)
     return p_s
@@ -504,7 +542,7 @@ def p_e_ratio(y, isy, isq, price):
         diluted_shares_outstanding = isy.Diluted_Shares_Outstanding.val(y)
         net_income = isy.Net_Income.val(y)
     elif period_type == 'quarter':
-        diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
+        diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
         net_income = sum_quarters(y, isq.Net_Income)
 
     p_e = price * diluted_shares_outstanding / net_income
@@ -518,24 +556,27 @@ def eps(y, isy, isq):
         diluted_shares_outstanding = isy.Diluted_Shares_Outstanding.val(y)
     elif period_type == 'quarter':
         net_income = sum_quarters(y, isq.Net_Income)
-        diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
+        diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
 
     eps = net_income / diluted_shares_outstanding
     return eps
 
 
 @is_null
-def peg(y, eps, isy, isq, price):
+def peg(y, py, eps, isy, isq, price):
     # Peter Lynch
     # liczony z bieżącego roku jak i piecioletniej oczekiwanej stopie wzrostu
     # dodanie oczekiwanego wzrostu spółki pomaga skorygować wynik w przypadku spółek które mogą miec wysoką stopę wzrostu i wysoki wskaźnik P/E
     # ponizej 1 na pewno dobrze - Lynch
-    if period_type == 'year':
-        eps_basic_growth = isy.EPS_Basic_Growth.val(y)
-    elif period_type == 'quarter':
-        eps_basic_growth = sum_quarters(y, isq.EPS_Basic_Growth)
+    if py is not None:
+        if period_type == 'year':
+            eps_basic_growth = isy.EPS_Basic_Growth.val(y)
+        elif period_type == 'quarter':
+            eps_basic_growth = isq.EPS_Basic.val(y[0]) / isq.EPS_Basic.val(py[0])
 
-    peg = (price / eps) / eps_basic_growth / 100
+        peg = (price / eps) / eps_basic_growth / 100
+    else:
+        peg = '-'
     return peg
 
 
@@ -558,8 +599,8 @@ def cash_ratio(y, bay, bly, baq, blq):
         cash_short_term_investments = bay.Cash_Short_Term_Investments.val(y)
         total_current_liabilities = bly.Total_Current_Liabilities.val(y)
     elif period_type == 'quarter':
-        cash_short_term_investments = sum_quarters(y, baq.Cash_Short_Term_Investments)
-        total_current_liabilities = sum_quarters(y, blq.Total_Current_Liabilities)
+        cash_short_term_investments = baq.Cash_Short_Term_Investments.val(y[0])
+        total_current_liabilities = blq.Total_Current_Liabilities.val(y[0])
 
     cash_ratio = cash_short_term_investments / total_current_liabilities
     return cash_ratio
@@ -573,8 +614,8 @@ def operating_cash_flow_debt_ratio(y, cfy, bly, cfq, blq):
         long_term_debt = bly.Long_Term_Debt.val(y)
     elif period_type == 'quarter':
         net_operating_cash_flow = sum_quarters(y, cfq.Net_Operating_Cash_Flow)
-        short_term_debt = sum_quarters(y, blq.Short_Term_Debt)
-        long_term_debt = sum_quarters(y, blq.Long_Term_Debt)
+        short_term_debt = blq.Short_Term_Debt.val(y[0])
+        long_term_debt = blq.Long_Term_Debt.val(y[0])
 
     cf_debt_ratio = net_operating_cash_flow / (short_term_debt + long_term_debt)
     return cf_debt_ratio

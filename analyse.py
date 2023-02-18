@@ -10,7 +10,8 @@ def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py
 
     # only for calculation
     price = ind.price(price)
-    nopat = ind.nopat(y, isy, isq)
+    ebit = ind.ebit(y, isy, isq)
+    nopat = ind.nopat(y, isy, isq, ebit)
     total_debt = ind.total_debt(y, bly, blq)
 
     # automatic
@@ -18,22 +19,22 @@ def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py
     retained_earnings = ind.retained_earnings(y, bly, isy, blq, isq)
     stopa_wzrostu = ind.stopa_wzrostu(roe, retained_earnings)
     roa = ind.roa(y, isy, bay, isq, baq)
-    roc = ind.roc(y, isy, bly, isq, blq)
-    roce = ind.roce(y, isy, bay, bly, isq, baq, blq)
+    roc = ind.roc(y, isy, bly, isq, blq, ebit)
+    roce = ind.roce(y, isy, bay, bly, isq, baq, blq, ebit)
     roic = ind.roic(y, bay, bly, baq, blq, nopat, total_debt)
 
     # wacc = fWacc(y, py, isy, bly, price) if n != 0 else '-'
     # rrr
     gross_margin = ind.gross_margin(y, isy, isq)
     ebitda_margin = ind.ebitda_margin(y, isy, isq)
-    ebit_margin = ind.ebit_margin(y, isy, isq)
+    ebit_margin = ind.ebit_margin(y, isy, isq, ebit)
     net_margin = ind.net_margin(y, isy, isq)
 
     d_e_ratio = ind.debt_to_equity_ratio(y, bly, blq)
     td_ta_ratio = ind.total_debt_to_total_assets_ratio(y, bay, bly, baq, blq)
     capex_revenue_ratio = ind.capex_to_revenue_ratio(n, y, py, isy, bay, isq, baq)
 
-    altman_z_score = ind.altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price)
+    altman_z_score = ind.altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price, ebit)
     beneish_m_score = ind.beneish_m_score(n, y, py, isy, bay, bly, cfy, isq, baq, blq, cfq)
 
     current_ratio = ind.current_ratio(y, bay, bly, baq, blq)
@@ -44,14 +45,14 @@ def calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price, y, py
     eps = ind.eps(y, isy, isq)
     peg = ind.peg(y, py, eps, isy, isq, price)
 
-    dscr = ind.debt_service_coverage_ratio(y, isy, isq)
+    dscr = ind.debt_service_coverage_ratio(y, isy, isq, ebit)
     cash_ratio = ind.cash_ratio(y, bay, bly, baq, blq)
     operating_cf_debt_ratio = ind.operating_cash_flow_debt_ratio(y, cfy, bly, cfq, blq)
 
     # directly from income statement
     sales_revenue = ind.sales_revenue(y, isy, isq)
     gross_income = ind.gross_income(y, isy, isq)
-    ebit = ind.ebit(y, isy, isq)
+
     ebitda = ind.ebitda(y, isy, isq)
     net_income = ind.net_income(y, isy, isq)
     research_development = ind.research_development(y, isy, isq)
@@ -75,14 +76,14 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, 
     current_year = all_years[-1]
     current_quarter = all_quarters[-1]
     dic_ind = {
-        'Indicators': ['Price', 'NOPAT', 'Total debt', 'ROE', 'Retained_earning', 'Stopa_wzrostu',
+        'Indicators': ['Price', 'EBIT', 'NOPAT', 'Total debt', 'ROE', 'Retained_earning', 'Stopa_wzrostu',
                        'ROA', 'ROC', 'ROCE', 'ROIC',
                        'Gross Margin', 'EBITDA Margin', 'EBIT Margin', 'Net Margin',
                        'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue ration',
                        'Altman Z Score', 'Beneish M Score', 'Current Ratio',
                        'P/S', 'P/E', 'EPS', 'PEG',
                        'DSCR', 'Cash Ratio', 'Operating CF to Debt Ratio',
-                       'Sales/Revenue', 'Gross income', 'EBIT', 'EBITDA', 'Net income',
+                       'Sales/Revenue', 'Gross income', 'EBITDA', 'Net income',
                        'Development&Research']}
 
     # years
@@ -112,7 +113,7 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, 
             qs_l_py = [all_quarters[n-4], all_quarters[n-5], all_quarters[n-6], all_quarters[n-7]] if n >= 7 else None
             dic_ind_q = calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price_q.close.val(qs_l[0]), qs_l, qs_l_py, dic_ind_q)
             df_q = pd.DataFrame(dic_ind_q)
-            if n == len(all_years) - 1:
+            if n == len(all_quarters) - 1:
                 dic_ind_q = calculate_indicators(n, isy, isq, bay, baq, bly, blq, cfy, cfq, price_q.current, qs_l, qs_l_py, dic_ind_q)
                 df_q = pd.DataFrame(dic_ind_q)
     if update_global is False:          # dodanie tickera i ustawienie na poczatku

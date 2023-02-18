@@ -7,6 +7,7 @@ def create_indicator_results():
 period_type = None
 indicator_results = create_indicator_results()
 
+
 def is_null(func):
     def inner(*args):
         global indicator_results
@@ -44,17 +45,12 @@ def price(price):
 
 
 @is_null
-def nopat(y, isy, isq):
+def nopat(y, isy, isq, ebit):
     if period_type == 'year':
         ebit = isy.EBIT.val(y)
         income_tax = isy.Income_Tax.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
         income_tax = sum_quarters(y, isq.Income_Tax)
-    print('ebit')
-    print(ebit)
-    print('income tax')
-    print(income_tax)
     nopat = ebit - income_tax
     return nopat
 
@@ -136,20 +132,19 @@ def roa(y, isy, bay, isq, baq):
 
 
 @is_null
-def roc(y, isy, bly, isq, blq):
+def roc(y, isy, bly, isq, blq, ebit):
     # zwrot z kapitału
     if period_type == 'year':
         ebit = isy.EBIT.val(y)
         total_equity = bly.Total_Equity.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
         total_equity = blq.Total_Equity.val(y[0])
     roc = ebit / total_equity
     return roc
 
 
 @is_null
-def roce(y, isy, bay, bly, isq, baq, blq):
+def roce(y, isy, bay, bly, isq, baq, blq, ebit):
     # return on capital employed
     # szczególnie przydatny w oceniuniu spółek w sektorach kapitałochłonnych - media, telekomunikacja, użyteczność publiczna
     # ważny jest trend
@@ -158,7 +153,6 @@ def roce(y, isy, bay, bly, isq, baq, blq):
         total_assets = bay.Total_Assets.val(y)
         total_current_liabilities = bly.Total_Current_Liabilities.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
         total_assets = baq.Total_Assets.val(y[0])
         total_current_liabilities = blq.Total_Current_Liabilities.val(y[0])
     roce = ebit / (total_assets - total_current_liabilities)
@@ -252,14 +246,13 @@ def ebitda_margin(y, isy, isq):
 
 
 @is_null
-def ebit_margin(y, isy, isq):
+def ebit_margin(y, isy, isq, ebit):
     # marża operacyjna
     # rentowność sprzedaży
     if period_type == 'year':
         ebit = isy.EBIT.val(y)
         sales_revenue = isy.Sales_Revenue.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
         sales_revenue = sum_quarters(y, isq.Sales_Revenue)
     ebit_margin = ebit / sales_revenue
     return ebit_margin
@@ -358,7 +351,7 @@ def capex_to_revenue_ratio(n, y, py, isy, bay, isq, baq):
 
 
 @is_null
-def altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price):
+def altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price, ebit):
     # test wytrzymałości kredytowej
     # powyżej 3 - bezpiecznie
     # poniżej 1.8 - zagrożenie bankructwem
@@ -379,7 +372,6 @@ def altman_z_score(y, retained_earnings, isy, bay, bly, isq, baq, blq, price):
         total_current_liabilities = blq.Total_Current_Liabilities.val(y[0])
         total_assets = baq.Total_Assets.val(y[0])
         net_income = sum_quarters(y, isq.Net_Income)
-        ebit = sum_quarters(y, isq.EBIT)
         # diluted_shares_outstanding = sum_quarters(y, isq.Diluted_Shares_Outstanding)
         # total_liabilities = sum_quarters(y, blq.Total_Liabilities)
         diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
@@ -572,8 +564,7 @@ def peg(y, py, eps, isy, isq, price):
         if period_type == 'year':
             eps_basic_growth = isy.EPS_Basic_Growth.val(y)
         elif period_type == 'quarter':
-            eps_basic_growth = isq.EPS_Basic.val(y[0]) / isq.EPS_Basic.val(py[0])
-
+            eps_basic_growth = isq.EPS_Basic_Growth.val(y[0]) / isq.EPS_Basic_Growth.val(py[0])
         peg = (price / eps) / eps_basic_growth / 100
     else:
         peg = '-'
@@ -581,12 +572,11 @@ def peg(y, py, eps, isy, isq, price):
 
 
 @is_null
-def debt_service_coverage_ratio(y, isy, isq):
+def debt_service_coverage_ratio(y, isy, isq, ebit):
     if period_type == 'year':
         ebit = isy.EBIT.val(y)
         interest_expense = isy.Interest_Expense.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
         interest_expense = sum_quarters(y, isq.Interest_Expense)
 
     dscr = ebit / interest_expense
@@ -647,7 +637,10 @@ def ebit(y, isy, isq):
     if period_type == 'year':
         ebit = isy.EBIT.val(y)
     elif period_type == 'quarter':
-        ebit = sum_quarters(y, isq.EBIT)
+        revenue = sum_quarters(y, isq.Sales_Revenue)
+        cogs = sum_quarters(y, isq.Cost_of_Goods_Sold_COGS_incl_D_A)
+        operating_expenses = sum_quarters(y, isq.SG_A_Expense)
+        ebit = revenue - cogs - operating_expenses
 
     return ebit
 

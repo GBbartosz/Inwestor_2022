@@ -139,6 +139,30 @@ def check_positions(ticker, url, positions_dic, num, df):
             return True
 
 
+def common_member(a, b):
+    a_set = set(a)
+    b_set = set(b)
+    return list(a_set & b_set)
+
+
+def update_sql_table_empty_values(df, sql_df, cursor, table_name):
+    common_columns = common_member(df.columns, sql_df.columns)
+    if common_columns:
+
+        for col in common_columns:
+            for r in sql_df.index:
+                if sql_df.loc[r, col] == '-' and df.loc[r, col] != '-'\
+                    or sql_df.loc[r, col] == '0.00%' and df.loc[r, col] != '0.00%'\
+                        or sql_df.loc[r, col] == 'nan' and df.loc[r, col] != 'nan':
+                    new_val = df.loc[r, col]
+                    sql_update_statement = '''
+                                    UPDATE wsj.dbo.{}
+                                    SET [{}] = '{}'
+                                    WHERE [index] = {}
+                                    '''.format(table_name, col, new_val, r)
+                    cursor.execute(sql_update_statement)
+
+
 def update(ticker, ticker_tables):
     global unsuccessful
     unsuccessful = None
@@ -263,9 +287,7 @@ def update(ticker, ticker_tables):
             except:
                 try_end_time = time.time()
                 try_time = try_end_time - try_start_time
-                if try_time < 60:
-                    pass
-                else:
+                if try_time > 60:
                     unsuccessful = ticker
                     print('For {0} {1} was not downloaded'.format(ticker, url))
                     return None
@@ -274,7 +296,8 @@ def update(ticker, ticker_tables):
 
         if num == 4 or num == 5:
             for d in df:
-                if d.columns[0] in ['All values USD Millions.', 'All values EUR Thousands.', 'All values EUR Millions.']:
+                if d.columns[0] in ['All values USD Thousands.', 'All values USD Millions.',
+                                    'All values EUR Thousands.', 'All values EUR Millions.']:
                     df = d
         else:
             df = df[0]
@@ -298,6 +321,9 @@ def update(ticker, ticker_tables):
             sql_df = pd.read_sql(sql_select_all, wsj_conn)
             sql_headers_names = list(sql_df.columns)
             lacking_column_names = []
+            update_sql_table_empty_values(df, sql_df, cursor, ticker_tables[num])
+            #update_sql_table_diluted_shares_outstanding(df, sql_df)
+
             if len(check_if_columns_are_current(web_headers_names, sql_headers_names, lacking_column_names)) == 0:
                 pass
             else:

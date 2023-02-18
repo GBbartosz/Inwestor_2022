@@ -481,6 +481,7 @@ def classes_from_sql(ticker):
     price_df_d, all_years = create_price_dfs(ticker, all_years_statements, fiscal_year_end)
     # price = Price(ticker, all_years, fiscal_year_end, price_df_m, price_df_d)
     price_y = Price(ticker, all_years, fiscal_year_end, price_df_d, 'y')
+    print(all_quarters)
     price_q = Price(ticker, all_quarters, fiscal_year_end, price_df_d, 'q')
 
     wsj_conn.close()

@@ -4,6 +4,8 @@ import sqlalchemy
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
+import update
+
 
 def get_rid_of_special_characters(word):
     special_characters = ['&', '/', '(', ')', ' ', '-', '.', ',', '\'']
@@ -323,10 +325,10 @@ class Price_year_quarter():
             for quarter in periods_list:
                 #quarter_end = transform_quarter(quarter, 'end')
                 #quarter_start = transform_quarter(quarter, 'start')
-                year = quarter[-4:]
-                month_name = quarter[3:6]
+                year = get_year(quarter)
+                month_name = get_month_name(quarter)
                 month_num = month_dict[month_name]
-                day = quarter[:2]
+                day = get_day(quarter)
                 quarter_end = '{0}-{1}-{2}'.format(year, month_num, day)
                 quarter_end = dt.datetime.strptime(quarter_end, '%Y-%m-%d')
 
@@ -382,6 +384,43 @@ class Price_year_quarter():
         return getattr(self, period)
 
 
+def detect_errors(table, columns):
+    global cursor
+
+    error_detected = False
+    if 'cursor' not in globals():
+        cursor, wsj_conn, engine = create_sql_connection()
+
+    for col in columns:
+        if '0001' in col:
+            error_detected = True
+            update.repair_column_name(table, col, cursor)
+
+    return error_detected
+
+
+def get_year(ystr):
+    pos = ystr.find('-') + 1
+    ystr = ystr[pos:]
+    pos = ystr.find('-') + 1
+    ynum = ystr[pos:]
+    return ynum
+
+
+def get_month_name(mstr):
+    pos = mstr.find('-')
+    mstart = pos + 1
+    mend = pos + 4
+    mname = mstr[mstart:mend]
+    return mname
+
+
+def get_day(dstr):
+    pos = dstr.find('-')
+    dnum = dstr[:pos]
+    return dnum
+
+
 def create_sql_connection():
     server = 'KOMPUTER\SQLEXPRESS'
     database = 'wsj'
@@ -429,6 +468,12 @@ def all_tables_available(ticker):
         return False
 
 
+def get_this_table_df(tabl, conn):
+    sql_select_all = 'SELECT * FROM {}'.format(tabl)
+    df = pd.read_sql(sql_select_all, con=conn)
+    return df
+
+
 def classes_from_sql(ticker):
     # import danych z sql i tworzenie klas
     wsj_conn = pyodbc.connect('Driver={SQL Server}; Server=KOMPUTER\SQLEXPRESS; Database=wsj; Trusted_Connection=yes')
@@ -436,10 +481,16 @@ def classes_from_sql(ticker):
     ticker_tables = create_basic_ticker_table_name(ticker)
     num = 0
     for tic_tabl in ticker_tables:
-        sql_select_all = 'SELECT * FROM {}'.format(tic_tabl)
-        df = pd.read_sql(sql_select_all, con=wsj_conn)
+        df = get_this_table_df(tic_tabl, wsj_conn)
         # tworzenie listy kolumn, lat i wskaznikow
         columns_list = list(df.columns)
+
+        # wykrycie błędów i powtórzenie importu df
+        detected_error = detect_errors(tic_tabl, columns_list)
+        if detected_error is True:
+            df = get_this_table_df(tic_tabl, wsj_conn)
+            columns_list = list(df.columns)
+
         years_list = columns_list[2:]
         ind_name_list = []
         ind_enumerate_list = []

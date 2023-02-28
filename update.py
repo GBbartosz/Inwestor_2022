@@ -1,11 +1,10 @@
 import time
-
-from bs4 import BeautifulSoup
 import datetime as dt
 import numpy as np
 import pandas as pd
 import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
 import utilities as u
 
@@ -260,6 +259,18 @@ def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
                                     '''.format(table_name, col, new_v, sql_df_indicators_column_name, share_ind)
                     print(sql_update_statement)
                     # cursor.execute(sql_update_statement)
+
+
+def repair_column_name(table_name, old_col_name, cursor):
+    sql_query = '''
+                ALTER TABLE [wsj].[dbo].[{}]
+                DROP COLUMN [{}]
+                '''.format(table_name, old_col_name)
+    cursor.execute(sql_query)
+    pos = table_name.find('_')
+    tic = table_name[:pos]
+    ticker_tables = u.create_basic_ticker_table_name(tic)
+    update(tic, ticker_tables)
 
 
 def update(ticker, ticker_tables):

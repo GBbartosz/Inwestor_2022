@@ -1,6 +1,7 @@
 import pandas as pd
 
 import indicators as ind
+import update
 import utilities as u
 
 

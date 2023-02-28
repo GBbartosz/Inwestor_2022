@@ -40,7 +40,7 @@ def analyse_one(ticker, only_one):
     ticker = ticker.upper()
     if u.all_tables_available(ticker) is False:
         print(ticker + ' - nie został sprawdzony. Brak tabel.')
-        df, df2 = pd.DataFrame(), pd.DataFrame()
+        df_y, df_q, df2 = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     else:
         isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters = u.classes_from_sql(ticker)
         df_y, df_q, df2 = analyse.calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters, False)

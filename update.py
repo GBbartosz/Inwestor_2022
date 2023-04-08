@@ -1,3 +1,4 @@
+import datetime
 import time
 import datetime as dt
 import numpy as np
@@ -47,6 +48,10 @@ def download_and_prepare_price_history(ticker, frequency):
         unsuccessful = ticker
         print('{0} is not valid for yfinance'.format(ticker))
         return None
+    if yf_price_data_timeliness(df) is False:
+        pass
+        #download data from other source
+
     if frequency == '1mo':
         df.sort_values('Date', ascending=False, inplace=True)
         df.drop(index=df.index[0], axis=0, inplace=True)
@@ -85,6 +90,7 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
                 #print('attempts level: {0}'.format(attempts_level))
                 url_check_list = list(map(lambda u: u.format(link_insert), url_empty_check_list))
                 url = url_check_list[0]
+                print(url)
                 resp = requests.get(url, headers=headers).text
                 dfs = pd.read_html(resp)
                 for d in dfs:
@@ -223,6 +229,7 @@ def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
     df_indicators_column_name = get_name_of_column_with_indicator_names(df)
     sql_df_indicators_column_name = get_name_of_column_with_indicator_names(sql_df)
     shares_indicators = ['Basic Shares Outstanding', 'Diluted Shares Outstanding', 'EPS (Basic)']
+                                                            # czy rownize eps diluted nie powinno byc zmieniane
     diff_dict = {}
     if common_columns:
         for share_ind in shares_indicators:
@@ -238,7 +245,7 @@ def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
                                     SET [{}] = '{}'
                                     WHERE [{}] = '{}'
                                     '''.format(table_name, col, v, sql_df_indicators_column_name, share_ind)
-                    #cursor.execute(sql_update_statement)
+                    cursor.execute(sql_update_statement)
             diff_dict[share_ind] = diff_l
 
     if len(only_sql_columns) > 0:
@@ -248,8 +255,6 @@ def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
                     break
                 change = avg(diff_dict[share_ind])
                 ssql_l = shorten_df_to_chosen_fragment(sql_df, only_sql_columns, sql_df_indicators_column_name, share_ind)
-                print('x')
-                print(ssql_l)
                 for sqlv, col in zip(ssql_l, only_sql_columns):
                     new_v = float(sqlv) * change
                     sql_update_statement = '''
@@ -257,8 +262,7 @@ def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
                                     SET [{}] = '{}'
                                     WHERE [{}] = '{}'
                                     '''.format(table_name, col, new_v, sql_df_indicators_column_name, share_ind)
-                    print(sql_update_statement)
-                    # cursor.execute(sql_update_statement)
+                    cursor.execute(sql_update_statement)
 
 
 def repair_column_name(table_name, old_col_name, cursor):
@@ -271,6 +275,16 @@ def repair_column_name(table_name, old_col_name, cursor):
     tic = table_name[:pos]
     ticker_tables = u.create_basic_ticker_table_name(tic)
     update(tic, ticker_tables)
+
+
+def yf_price_data_timeliness(df):
+    yf_max_date = df['Date'].max()
+    diff = abs(datetime.date.today(), yf_max_date)
+    if diff < 5:
+        res = True
+    else:
+        res = False
+    return res
 
 
 def update(ticker, ticker_tables):

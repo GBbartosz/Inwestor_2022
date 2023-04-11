@@ -338,12 +338,6 @@ class Price_year_quarter():
 
                 quarter_end_ind = find_index_of_date(quarter_start, price_df)
                 quarter_start_ind = find_index_of_date(quarter_end, price_df)
-                # print('start')
-                # print(quarter_start)
-                # print(quarter_start_ind)
-                # print('end')
-                # print(quarter_end)
-                # print(quarter_end_ind)
 
                 df = price_df.iloc[quarter_start_ind:quarter_end_ind, :]
                 if p == 'max':
@@ -532,7 +526,6 @@ def classes_from_sql(ticker):
     price_df_d, all_years = create_price_dfs(ticker, all_years_statements, fiscal_year_end)
     # price = Price(ticker, all_years, fiscal_year_end, price_df_m, price_df_d)
     price_y = Price(ticker, all_years, fiscal_year_end, price_df_d, 'y')
-    print(all_quarters)
     price_q = Price(ticker, all_quarters, fiscal_year_end, price_df_d, 'q')
 
     wsj_conn.close()
@@ -597,3 +590,24 @@ def create_price_dfs(ticker, all_years_statements, fiscal_year_end):
             all_years.append(y)
     # return price_df_m, price_df_d, all_years
     return price_df_d, all_years
+
+
+def pandas_df_display_options():
+    pd.reset_option('display.max_rows')
+    pd.reset_option('display.max_columns')
+    pd.reset_option('display.width')
+    pd.reset_option('display.float_format')
+    pd.reset_option('display.max_colwidth')
+
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_colwidth', 20)
+    pd.set_option('display.width', 400)
+
+
+def get_total_number_and_range_of_all_tickers(tickers_list):
+    total_number = len(tickers_list)
+    total_number_range = range(len(tickers_list) + 1)[1:]
+    print(total_number)
+    return total_number, total_number_range
+

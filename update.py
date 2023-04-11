@@ -48,6 +48,9 @@ def download_and_prepare_price_history(ticker, frequency):
         unsuccessful = ticker
         print('{0} is not valid for yfinance'.format(ticker))
         return None
+    if 'Date' not in df.columns:
+        #df['Date'] = df.index
+        df = df.reset_index()
     if yf_price_data_timeliness(df) is False:
         pass
         #download data from other source
@@ -279,7 +282,8 @@ def repair_column_name(table_name, old_col_name, cursor):
 
 def yf_price_data_timeliness(df):
     yf_max_date = df['Date'].max()
-    diff = abs(datetime.date.today(), yf_max_date)
+    delta = datetime.date.today() - yf_max_date.to_pydatetime().date()
+    diff = delta.days
     if diff < 5:
         res = True
     else:
@@ -536,11 +540,12 @@ def update_price(ticker):
                         for c in df_diff.columns:
                             insert_values.append(df_diff[c].iloc[r])
                         insert_values_without_str = insert_values[2:]
-                        if any(np.isnan(x) for x in insert_values_without_str) is False:
-                            sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
-                                         'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values)
-                            cursor.execute(sql_insert)
-                            cursor.commit()
+                        for x in insert_values_without_str:
+                            if x is not None and x is not np.nan:
+                                sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
+                                             'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values)
+                                cursor.execute(sql_insert)
+                                cursor.commit()
             else:
                 price_df = download_and_prepare_price_history(ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)

@@ -4,7 +4,7 @@ import analyse
 
 
 def calculateglobal(tickers_list):
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     # loop tickers
     industries = {}
     for ticker in tickers_list:

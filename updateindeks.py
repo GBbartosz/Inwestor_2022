@@ -8,7 +8,7 @@ import utilities as u
 
 def update_indeks():
     indekses = [('SP_500', '^GSPC'), ('NASDAQ', '^IXIC')]
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     sql_table_list = u.get_all_tables(cursor)
     frequencies = ['1mo', '1d']
     for indeks_name, indeks_ticker in indekses:

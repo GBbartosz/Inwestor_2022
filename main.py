@@ -10,14 +10,15 @@ import analyse
 import update
 import updateglobal
 import updateindeks
+import updatenotebook as upnot
 import utilities as u
 import warnings
 
 
 def create_or_replace_indicators_sql_table(ticker, dfs):
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsja')
     analysed_tables = ['year', 'quarter', 'global']
-    analysed_tables = ['analysis_{}_{}'.format(ticker, p) for p in analysed_tables]
+    analysed_tables = ['wsja.dbo.analysis_{}_{}'.format(ticker, p) for p in analysed_tables]
     for analysed_table, df in zip(analysed_tables, dfs):
         df.to_sql(analysed_table, con=engine, if_exists='replace', index=False)
 
@@ -72,13 +73,14 @@ def analyse_one(ticker, only_one):
     return df_y, df_q, df2
 
 
-def analyse_all():
+def analyse_all(tickers_list):
     start_time = time.time()
     frame_df_y = []
     frame_df_q = []
     frame_df2 = []
     total_number, total_number_range = u.get_total_number_and_range_of_all_tickers(tickers_list)
     for tic, num in zip(tickers_list, total_number_range):
+        print(tic)
         print(tic)
         print('{0} out of {1}'.format(num, total_number))
         df_y, df_q, df2 = analyse_one(tic, False)
@@ -104,16 +106,19 @@ def update_one(ticker):
     update.update(ticker, ticker_tables)
 
 
-def update_all():
+def update_all(tickers_list):
     unsuccessfuls = []
-    total_number, total_number_range = u.get_total_number_and_range_of_all_tickers(tickers_list)
-    for tic, num in zip(tickers_list, total_number_range):
+    update_notebook = upnot.UpdateNotebook()
+    remaining_tickers = upnot.update_notebook(tickers_list)
+    total_number, total_number_range = u.get_total_number_and_range_of_all_tickers(remaining_tickers)
+    for tic, num in zip(remaining_tickers, total_number_range):
         print(tic)
         print('{0} out of {1}'.format(num, total_number))
         ticker_tables = u.create_basic_ticker_table_name(tic)
         update.update(tic, ticker_tables)
         if update.unsuccessful is not None:
             unsuccessfuls.append(update.unsuccessful)
+        update_notebook.confirm_updated(tic)
     print(unsuccessfuls)
 
 

@@ -7,6 +7,7 @@ import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
 
+import share_split as ss
 import utilities as u
 
 
@@ -89,8 +90,6 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
         attempts_level = 4
         while url_ok is False:
             try:
-                #print('attempts: {0}'.format(attempts))
-                #print('attempts level: {0}'.format(attempts_level))
                 url_check_list = list(map(lambda u: u.format(link_insert), url_empty_check_list))
                 url = url_check_list[0]
                 print(url)
@@ -139,43 +138,14 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
 def check_positions(ticker, url, positions_dic, num, df):
     for i in df.index:
         if positions_dic[num][i] != df.iloc[i, 1]:
-            print(positions_dic[num][i])
-            print(df.iloc[i, 1])
             print('{0} under {1} has not valid positions'.format(ticker, url))
             return False
         else:
             return True
 
 
-def get_rid_of_index_and_indicators(coll):
-    if 'index' in coll:
-        coll.remove('index')
-    for c in coll:
-        if 'Fiscal' in c:
-            coll.remove(c)
-    return coll
-
-
-def common_member(a, b):
-    common = []
-    for c in a:
-        if c in b:
-            common.append(c)
-    common = get_rid_of_index_and_indicators(common)
-    return common
-
-
-def get_columns_only_in_sql(df, sql_df):
-    res = []
-    for sqlc in sql_df.columns:
-        if sqlc not in df.columns:
-            res.append(sqlc)
-    res = get_rid_of_index_and_indicators(res)
-    return res
-
-
 def update_sql_table_empty_values(df, sql_df, cursor, table_name):
-    common_columns = common_member(df.columns, sql_df.columns)
+    common_columns = u.common_member(df.columns, sql_df.columns)
     if common_columns:
         for col in common_columns:
             for r in sql_df.index:
@@ -184,38 +154,11 @@ def update_sql_table_empty_values(df, sql_df, cursor, table_name):
                         or sql_df.loc[r, col] == 'nan' and df.loc[r, col] != 'nan':
                     new_val = df.loc[r, col]
                     sql_update_statement = '''
-                                    UPDATE wsj.dbo.{}
+                                    UPDATE wsj.dbo.[{}]
                                     SET [{}] = '{}'
                                     WHERE [index] = {}
                                     '''.format(table_name, col, new_val, r)
                     cursor.execute(sql_update_statement)
-
-
-def avg(mylist):
-    return sum(mylist) / len(mylist)
-
-
-def get_name_of_column_with_indicator_names(tdf):
-    column_name = tdf.columns[1]
-    return column_name
-
-
-def shorten_df_to_chosen_fragment(tdf, chosen_columns, column_name, share_ind):
-    tdf = tdf.query("`{}` == '{}'".format(column_name, share_ind))
-    tdf = tdf[chosen_columns]
-    tdf = squeezing(tdf)
-    return tdf
-
-
-def compare_changes(changel):
-    outcome = True
-    c0 = changel[0]
-    for c in changel:
-        res = c / c0
-        if res < 0.9 or res > 1.1:
-            print('Error stock split change: {}'.format(changel))
-            outcome = False
-    return outcome
 
 
 def squeezing(myseries):
@@ -224,48 +167,6 @@ def squeezing(myseries):
     except AttributeError:
         x = list(myseries.squeeze())
     return x
-
-
-def update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, table_name):
-    common_columns = common_member(df.columns, sql_df.columns)
-    only_sql_columns = get_columns_only_in_sql(df, sql_df)
-    df_indicators_column_name = get_name_of_column_with_indicator_names(df)
-    sql_df_indicators_column_name = get_name_of_column_with_indicator_names(sql_df)
-    shares_indicators = ['Basic Shares Outstanding', 'Diluted Shares Outstanding', 'EPS (Basic)']
-                                                            # czy rownize eps diluted nie powinno byc zmieniane
-    diff_dict = {}
-    if common_columns:
-        for share_ind in shares_indicators:
-            s_l = shorten_df_to_chosen_fragment(df, common_columns, df_indicators_column_name, share_ind)
-            ssql_l = shorten_df_to_chosen_fragment(sql_df, common_columns, sql_df_indicators_column_name, share_ind)
-            diff_l = []
-            for v, sqlv, col in zip(s_l, ssql_l, common_columns):
-                if v != sqlv:
-                    if v != '-' and sqlv != '-':
-                        diff_l.append(float(v) / float(sqlv))
-                    sql_update_statement = '''
-                                    UPDATE wsj.dbo.{}
-                                    SET [{}] = '{}'
-                                    WHERE [{}] = '{}'
-                                    '''.format(table_name, col, v, sql_df_indicators_column_name, share_ind)
-                    cursor.execute(sql_update_statement)
-            diff_dict[share_ind] = diff_l
-
-    if len(only_sql_columns) > 0:
-        for share_ind in shares_indicators:
-            if diff_dict[share_ind]:
-                if compare_changes(diff_dict[share_ind]) is False:
-                    break
-                change = avg(diff_dict[share_ind])
-                ssql_l = shorten_df_to_chosen_fragment(sql_df, only_sql_columns, sql_df_indicators_column_name, share_ind)
-                for sqlv, col in zip(ssql_l, only_sql_columns):
-                    new_v = float(sqlv) * change
-                    sql_update_statement = '''
-                                    UPDATE wsj.dbo.{}
-                                    SET [{}] = '{}'
-                                    WHERE [{}] = '{}'
-                                    '''.format(table_name, col, new_v, sql_df_indicators_column_name, share_ind)
-                    cursor.execute(sql_update_statement)
 
 
 def repair_column_name(table_name, old_col_name, cursor):
@@ -376,7 +277,7 @@ def update(ticker, ticker_tables):
         **dict.fromkeys([6, 7], cash_flow_positions)
     }
 
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     sql_table_list = u.get_all_tables(cursor)
 
     WSJ_income_statement_y = 'https://www.wsj.com/market-data/quotes/{0}/financials/annual/income-statement'
@@ -451,8 +352,10 @@ def update(ticker, ticker_tables):
             lacking_column_names = []
             update_sql_table_empty_values(df, sql_df, cursor, ticker_tables[num])
             #income statement tables q, y
+
+            # aktualziacja share split
             if ticker_tables[num] in [ticker_tables[0], ticker_tables[1]]:
-                update_sql_table_diluted_shares_outstanding(df, sql_df, cursor, ticker_tables[num])
+                ss.handle_share_split(df, sql_df, cursor, ticker_tables[num])
 
             if len(check_if_columns_are_current(web_headers_names, sql_headers_names, lacking_column_names)) == 0:
                 pass
@@ -493,7 +396,7 @@ def update(ticker, ticker_tables):
 
 
 def update_profile(ticker, url_check_list):
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
     ticker_profile = ticker + '_profile'
     profile_path = url_check_list[8]
@@ -515,7 +418,7 @@ def update_profile(ticker, url_check_list):
 
 
 def update_price(ticker):
-    cursor, wsj_conn, engine = u.create_sql_connection()
+    cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     sql_table_list = u.get_all_tables(cursor)
     # frequencies = ['1mo', '1d']  # nie wyszukuje 1mo
     frequencies = ['1d']
@@ -534,7 +437,6 @@ def update_price(ticker):
                 else:
                     df_diff = pd.concat([price_df_url, price_df_sql]).drop_duplicates(subset='Date', keep=False) # yahoo zmienia dane i w efekcie daty się duplikują, konieczny subset
                     df_diff.reset_index(drop=True, inplace=True)
-                    #print(df_diff)
                     for r in df_diff.index:
                         insert_values = [ticker_price_history]
                         for c in df_diff.columns:
@@ -550,5 +452,4 @@ def update_price(ticker):
                 price_df = download_and_prepare_price_history(ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)
 
-        #print('{0} updated'.format(ticker_price_history))
     wsj_conn.close()

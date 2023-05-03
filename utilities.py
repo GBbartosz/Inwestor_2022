@@ -7,6 +7,44 @@ from pandas.api.types import CategoricalDtype
 import update
 
 
+def get_rid_of_index_and_indicators(coll):
+    if 'index' in coll:
+        coll.remove('index')
+    for c in coll:
+        if 'Fiscal' in c:
+            coll.remove(c)
+    return coll
+
+
+def common_member(a, b):
+    common = []
+    for c in a:
+        if c in b:
+            common.append(c)
+    common = get_rid_of_index_and_indicators(common)
+    return common
+
+
+def transform_val(val):
+    if val == '-':
+        val = 0
+    if val is None:
+        val = 0
+    if val != 0:
+        if ',' in val:
+            val = val.replace(',', '.')
+        if '(' in val:
+            val = val.replace('(', '-')
+            val = val.replace(')', '')
+        if '.' in val and val.count('.') > 1:
+            val = val.replace('.', '')
+        if '%' in val:
+            val = val.replace('%', '')
+            val = float(val) / 100
+        val = float(val)
+    return val
+
+
 def get_rid_of_special_characters(word):
     special_characters = ['&', '/', '(', ')', ' ', '-', '.', ',', '\'']
     for char in special_characters:
@@ -259,22 +297,7 @@ class Indicator(object):
         for y in years_list:
             #_y = '_' + y
             val = df[y][i]
-            if val == '-':
-                val = 0
-            if val is None:
-                val = 0
-            if val != 0:
-                if ',' in val:
-                    val = val.replace(',', '.')
-                if '(' in val:
-                    val = val.replace('(', '-')
-                    val = val.replace(')', '')
-                if '.' in val and val.count('.') > 1:
-                    val = val.replace('.', '')
-                if '%' in val:
-                    val = val.replace('%', '')
-                    val = float(val) / 100
-                val = float(val)
+            val = transform_val(val)
             setattr(self, y, val)
 
     def __float__(self, year):
@@ -304,24 +327,46 @@ class Price():
         return self.current
 
 
+def month_name_num_dict():
+    month_dict = {'Jan': '01',
+                  'Feb': '02',
+                  'Mar': '03',
+                  'Apr': '04',
+                  'May': '05',
+                  'Jun': '06',
+                  'Jul': '07',
+                  'Aug': '08',
+                  'Sep': '09',
+                  'Oct': '10',
+                  'Nov': '11',
+                  'Dec': '12'
+                  }
+    return month_dict
+
+
+def month_name_quarter_dict():
+    month_dict = {'Jan': '1',
+                  'Feb': '1',
+                  'Mar': '1',
+                  'Apr': '2',
+                  'May': '2',
+                  'Jun': '2',
+                  'Jul': '3',
+                  'Aug': '3',
+                  'Sep': '3',
+                  'Oct': '4',
+                  'Nov': '4',
+                  'Dec': '4'
+                  }
+    return month_dict
+
+
 class Price_year_quarter():
     #sciagnely sie zbyt krotkie tabele - powod bledu
     # trzeba usunac wiersze z NaN - nie przeszkadzaja ale nie potrzebne w miesiacach
     def __init__(self, p, periods_list, price_df, fiscal_year_end, frequency):
         if frequency == 'q':
-            month_dict = {'Jan': '01',
-                          'Feb': '02',
-                          'Mar': '03',
-                          'Apr': '04',
-                          'May': '05',
-                          'Jun': '06',
-                          'Jul': '07',
-                          'Aug': '08',
-                          'Sep': '09',
-                          'Oct': '10',
-                          'Nov': '11',
-                          'Dec': '12'
-                          }
+            month_dict = month_name_num_dict()
             for quarter in periods_list:
                 #quarter_end = transform_quarter(quarter, 'end')
                 #quarter_start = transform_quarter(quarter, 'start')
@@ -340,6 +385,7 @@ class Price_year_quarter():
                 quarter_start_ind = find_index_of_date(quarter_end, price_df)
 
                 df = price_df.iloc[quarter_start_ind:quarter_end_ind, :]
+
                 if p == 'max':
                     val = df['High'].max()
                 elif p == 'min':
@@ -383,7 +429,7 @@ def detect_errors(table, columns):
 
     error_detected = False
     if 'cursor' not in globals():
-        cursor, wsj_conn, engine = create_sql_connection()
+        cursor, wsj_conn, engine = create_sql_connection('wsj')
 
     for col in columns:
         if '0001' in col:
@@ -415,9 +461,9 @@ def get_day(dstr):
     return dnum
 
 
-def create_sql_connection():
+def create_sql_connection(mydatabase):
     server = 'KOMPUTER\SQLEXPRESS'
-    database = 'wsj'
+    database = mydatabase
     driver = 'SQL Server'
     wsj_conn = pyodbc.connect('Driver={SQL Server}; Server=KOMPUTER\SQLEXPRESS; Database=wsj; Trusted_Connection=yes')
     wsj_conn.autocommit = True
@@ -453,7 +499,7 @@ def create_advanced_ticker_table_name(ticker):
 
 def all_tables_available(ticker):
     necessary_tables = create_basic_ticker_table_name(ticker) + create_advanced_ticker_table_name(ticker)
-    cursor, wsj_conn, engine = create_sql_connection()
+    cursor, wsj_conn, engine = create_sql_connection('wsj')
     sql_table_list = get_all_tables(cursor)
     wsj_conn.close()
     if all(t in sql_table_list for t in necessary_tables) == True:
@@ -562,7 +608,7 @@ def find_index_of_date(mydate, df):
 
 def create_price_dfs(ticker, all_years_statements, fiscal_year_end):
 
-    cursor, wsj_conn, engine = create_sql_connection()
+    cursor, wsj_conn, engine = create_sql_connection('wsj')
 
     # ticker_price_history_m = ticker + '_price_history_1mo'
     # sql_select_all_m = 'SELECT * FROM {0}'.format(ticker_price_history_m)

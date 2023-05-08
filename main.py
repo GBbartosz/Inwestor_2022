@@ -18,7 +18,7 @@ import warnings
 def create_or_replace_indicators_sql_table(ticker, dfs):
     cursor, wsj_conn, engine = u.create_sql_connection('wsja')
     analysed_tables = ['year', 'quarter', 'global']
-    analysed_tables = ['wsja.dbo.analysis_{}_{}'.format(ticker, p) for p in analysed_tables]
+    analysed_tables = ['analysis_{}_{}'.format(ticker, p) for p in analysed_tables]
     for analysed_table, df in zip(analysed_tables, dfs):
         df.to_sql(analysed_table, con=engine, if_exists='replace', index=False)
 

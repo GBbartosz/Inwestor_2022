@@ -2,6 +2,7 @@ import pandas as pd
 import utilities as u
 
 
+
 def transform_dates_to_quarters(df):
 
     def get_month_year(x):
@@ -33,7 +34,7 @@ def dictionary_keys_to_list(mydict):
 
 class Ticker:
     def __init__(self, ticker, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
-        self.ticker = ticker
+        self.name = ticker
         self.df_y = None
         self.df_q = None
         self.dates_y = None
@@ -87,12 +88,12 @@ class Ticker:
         self.dates_q = df.columns[2:]
 
     def set_income_statment_df_year(self):
-        sql_query = f'SELECT * FROM wsj.dbo.{self.ticker}_income_statement_y'
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_y'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.is_df_y = df
 
     def set_income_statment_df_quarter(self):
-        sql_query = f'SELECT * FROM wsj.dbo.{self.ticker}_income_statement_q'
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.is_df_q = df
 

@@ -8,7 +8,15 @@ import plotly as plt
 import plotly.graph_objects as go
 
 from tickerclass import Ticker
+from plotlyfig import PlotlyFig
 
+def create_analyse_chart():
+    fig = go.Figure()
+    return fig
+
+def add_trace_analyse_chart(fig):
+    x = tic.dates_y
+    fig.add_trace(go.Scatter(x=x, y=y))
 
 def analyse_chart(tic):
 
@@ -60,12 +68,12 @@ def analyse_chart(tic):
         return fig
 
 
-def tickers_for_dropdown(tickers_l):
-    ddl = []
-    for tic in tickers_l:
-        ddd = {'label': tic, 'value': tic}
-        ddl.append(ddd)
-    return ddl
+def options_for_dropdown(mylist):
+    newlist = []
+    for i in mylist:
+        tmp = {'label': i, 'value': i}
+        newlist.append(tmp)
+    return newlist
 
 
 def dashboard():
@@ -79,10 +87,13 @@ def dashboard():
     tic.set_df_quarter()
     tic.set_income_statment_df_year()
     tic.set_income_statment_df_quarter()
-    tickers_dropdown_l = tickers_for_dropdown(tickers_list)
+    tickers_dropdown_l = options_for_dropdown(tickers_list)
 
     if ticker_name is None:
         ticker_name = ' '
+        indicators_l = []
+        main_chart_fig = create_analyse_chart()
+
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
 
@@ -96,10 +107,19 @@ def dashboard():
                                  children=ticker_name,
                                  style={'width': '120px', 'height': '30px'})
                 ),
-                dash.dcc.Dropdown(id='ticker_dd',
-                                  options=tickers_dropdown_l,
-                                  style={'width': '120px', 'height': '30px'}),
-                dash.dcc.Graph(id='main_chart')
+                dash.html.Div(children=[
+                    dash.dcc.Dropdown(id='ticker_dd',
+                                      options=tickers_dropdown_l,
+                                      multi=True,
+                                      style={'width': '360px', 'height': '40px'}),
+                    dash.dcc.Dropdown(id='indicator_dd',
+                                      options=indicators_l,
+                                      disabled=True,
+                                      multi=True,
+                                      style={'width': '360px', 'height': '40px'})],
+                    style={'display': 'inline-block'}
+                ),
+                dash.dcc.Graph(id='main_chart', figure=main_chart_fig)
             ])
     dash.register_page('main_page', path='/', layout=layout_main_page)
 
@@ -111,19 +131,52 @@ def dashboard():
     #    return ticker_name
 
     @app.callback(
+        dash.Output(component_id='indicator_dd', component_property='options'),
+        dash.Output(component_id='indicator_dd', component_property='disabled'),
         dash.Output(component_id='main_chart', component_property='figure'),
         dash.Input(component_id='ticker_dd', component_property='value')
     )
-    def update_main_chart(chosen_ticker):
+    def dropdown_selection_of_ticker(chosen_ticker):
         global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-        fig = go.Figure()
+        nonlocal main_chart_fig
+
+        def update_indicator_dropdown(tic):
+            indicators_names_l = tic.indicators_names_l
+            indicators_dropdown_l = options_for_dropdown(indicators_names_l)
+            return indicators_dropdown_l
+
+        def update_main_chart(main_chart_fig, chosen_ticker, tic):
+            plotly_fig = PlotlyFig(main_chart_fig)
+            if tic is None:  # spelnioine przy uruchomieniu programu
+                main_chart_fig = plotly_fig.remove_element_from_figure_data(chosen_ticker)
+            else:
+                if tic.name in plotly_fig.traces_names and len(plotly_fig.traces_names) > 0:  # jesli wybrano usuniecie
+                    main_chart_fig = plotly_fig.remove_element_from_figure_data(chosen_ticker)
+                else:  # jesli wybrano nowy ticker
+                    x = tic.dates_y
+                    y = tic.Price_y.values
+                    main_chart_fig.add_trace(go.Scatter(
+                        x=x,
+                        y=y,
+                        name=tic.name
+                    ))
+            return main_chart_fig
+
+        tic = None
+        options = []
+        disabled = True
+
         if chosen_ticker:
-            tic = Ticker(chosen_ticker, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            current_ticker = chosen_ticker[-1]
+            tic = Ticker(current_ticker, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
             tic.set_df_year()
             tic.create_indicators()
 
-            fig = analyse_chart(tic)
-        return fig
+            options = update_indicator_dropdown(tic)
+            disabled = False
+        main_chart_fig = update_main_chart(main_chart_fig, chosen_ticker, tic)
+
+        return options, disabled, main_chart_fig
 
     app.run_server(debug=True)
 

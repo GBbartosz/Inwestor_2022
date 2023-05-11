@@ -10,174 +10,143 @@ import plotly.graph_objects as go
 from tickerclass import Ticker
 from plotlyfig import PlotlyFig
 
-def create_analyse_chart():
-    fig = go.Figure()
-    return fig
 
-def add_trace_analyse_chart(fig):
-    x = tic.dates_y
-    fig.add_trace(go.Scatter(x=x, y=y))
+def ticker_indicator_dd_update(chosen_val, ddchosen_obj_actual, dd_obj_other):
 
-def analyse_chart(tic):
+    def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
 
-    def get_main_chart_dd_buttons(indicators_names_l):
+        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic):
+            for i in ddchosen_obj_ind.elements:
+                indicator_name = i + '_y'
+                x = tic.dates_y
+                y = getattr(tic, indicator_name).values
+                n = tic.name + '_' + i
+                xs.append(x)
+                ys.append(y)
+                names.append(n)
+                main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n))
 
-        def get_indicators_names_d(indicators_names_l):
-            mydict = {}
-            for i, n in zip(indicators_names_l, list(range(len(indicators_names_l)))):
-                mydict[i] = n
-            return mydict
+        for t in ddchosen_obj_tic.elements:
+            tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            tic.set_df_year()
+            tic.create_indicators()
+            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic)
 
-        def get_true_false_l(elenum, num):
-            l = num * [False]
-            l[elenum] = True
-            return l
-
-        bl = []
-        indicators_names_d = get_indicators_names_d(indicators_names_l)
-        number_of_elements = len(indicators_names_d.keys())
-        for i in indicators_names_d.keys():
-            position_of_element = indicators_names_d[i]
-            true_false_l = get_true_false_l(position_of_element, number_of_elements)
-            print(true_false_l)
-            ele = {'label': i,
-                   'method': 'update',
-                   'args': [{'visible': true_false_l},
-                            {'title': i}]}
-            bl.append(ele)
-        return bl
-
-    if tic is not None:
-        main_chart_dd_buttons = get_main_chart_dd_buttons(tic.indicators_names_l)
-
-        fig = go.Figure()
-        x = tic.dates_y
-        for i in tic.indicators_names_l:
-            ia = i + '_y'
-            y = getattr(tic, ia).values
-            fig.add_trace(go.Scatter(x=x, y=y))
-
-        fig.update_layout({
-            'updatemenus': [{
-                'type': 'dropdown',
-                'showactive': True,
-                'active': 0,
-                'buttons': main_chart_dd_buttons}]
-        })
-
-        return fig
+    main_chart_fig = go.Figure()
+    ddchosen_obj_actual.update(chosen_val)
+    if chosen_val:
+        if dd_obj_other.not_empty():
+            xs = []
+            ys = []
+            names = []
+            if ddchosen_obj_actual.name == 'ticker':
+                create_ticker_obj(main_chart_fig, ddchosen_obj_actual, dd_obj_other, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor,
+                                  wsja_conn, wsja_engine)
+            else:
+                create_ticker_obj(main_chart_fig, dd_obj_other, ddchosen_obj_actual, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor,
+                                  wsja_conn, wsja_engine)
+    return main_chart_fig
 
 
-def options_for_dropdown(mylist):
-    newlist = []
-    for i in mylist:
-        tmp = {'label': i, 'value': i}
-        newlist.append(tmp)
-    return newlist
+def all_options_for_dropdowns(tickers_list):
+    global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
 
-
-def dashboard():
-    ticker_name = None
-
-    u.pandas_df_display_options()
-    tickers_list = ['GOOGL', 'META', 'NFLX']                                                   #dodac jako argument
+    def options_for_dropdown(mylist):
+        newlist = []
+        for i in mylist:
+            tmp = {'label': i, 'value': i}
+            newlist.append(tmp)
+        return newlist
 
     tic = Ticker(tickers_list[1], wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
     tic.set_df_year()
-    tic.set_df_quarter()
-    tic.set_income_statment_df_year()
-    tic.set_income_statment_df_quarter()
+    tic.create_indicators()
     tickers_dropdown_l = options_for_dropdown(tickers_list)
-
-    if ticker_name is None:
-        ticker_name = ' '
-        indicators_l = []
-        main_chart_fig = create_analyse_chart()
+    indicators_dropdown_l = options_for_dropdown(tic.indicators_names_l)
+    return tickers_dropdown_l, indicators_dropdown_l
 
 
-    app = dash.Dash(__name__, pages_folder="", use_pages=True)
+class DDChosen:
+    def __init__(self, name):
+        self.elements = []
+        self.name = name
+
+    def update(self, new_element):
+        if new_element in self.elements:
+            self.elements.remove(new_element)
+        else:
+            self.elements = new_element
+
+    def not_empty(self):
+        if len(self.elements) > 0:
+            res = True
+        else:
+            res = False
+        return res
 
 
-    ### main page ###
+def dashboard():
 
-    # layout_main_page = get_layout_main_page(ticker_name, tickers_dropdown_l, app)
-    layout_main_page = dash.html.Div([
-                dash.html.Div(
-                    dash.html.H1(id='h1_ticker_name',
-                                 children=ticker_name,
-                                 style={'width': '120px', 'height': '30px'})
-                ),
-                dash.html.Div(children=[
-                    dash.dcc.Dropdown(id='ticker_dd',
-                                      options=tickers_dropdown_l,
-                                      multi=True,
-                                      style={'width': '360px', 'height': '40px'}),
-                    dash.dcc.Dropdown(id='indicator_dd',
-                                      options=indicators_l,
-                                      disabled=True,
-                                      multi=True,
-                                      style={'width': '360px', 'height': '40px'})],
-                    style={'display': 'inline-block'}
-                ),
-                dash.dcc.Graph(id='main_chart', figure=main_chart_fig)
-            ])
-    dash.register_page('main_page', path='/', layout=layout_main_page)
+    def main_page(tickers_list):
+        dd_chosen_ticker = DDChosen('ticker')
+        dd_chosen_indicator = DDChosen('indicator')
+        tickers_dropdown_l, indicators_dropdown_l = all_options_for_dropdowns(tickers_list)
 
-    #@app.callback(
-    #    dash.Output(component_id='h1_ticker_name', component_property='children'),
-    #    dash.Input(component_id='ticker_dd', component_property='value')
-    #)
-    #def update_h1_ticker(ticker_name):
-    #    return ticker_name
+        layout_main_page = dash.html.Div([
+            dash.html.Div(
+                dash.html.H1(id='h1_ticker_name',
+                             children='None ticker selected',
+                             style={'width': '1200px', 'height': '40px'})
+            ),
+            dash.html.Div(children=[
+                dash.dcc.Dropdown(id='ticker_dd',
+                                  options=tickers_dropdown_l,
+                                  placeholder='Select ticker',
+                                  multi=True,
+                                  style={'width': '480px', 'height': '40px'}),
+                dash.dcc.Dropdown(id='indicator_dd',
+                                  options=indicators_dropdown_l,
+                                  placeholder='Select indicator',
+                                  multi=True,
+                                  style={'width': '480px', 'height': '40px'})],
+                style={'display': 'inline-block'}
+            ),
+            dash.dcc.Graph(id='main_chart', figure=go.Figure())
+        ])
+        dash.register_page('main_page', path='/', layout=layout_main_page)
 
-    @app.callback(
-        dash.Output(component_id='indicator_dd', component_property='options'),
-        dash.Output(component_id='indicator_dd', component_property='disabled'),
-        dash.Output(component_id='main_chart', component_property='figure'),
-        dash.Input(component_id='ticker_dd', component_property='value')
-    )
-    def dropdown_selection_of_ticker(chosen_ticker):
-        global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-        nonlocal main_chart_fig
+        @app.callback(
+            dash.Output(component_id='h1_ticker_name', component_property='children'),
+            dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ticker_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_ticker(chosen_ticker):
+            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal dd_chosen_ticker, dd_chosen_indicator
 
-        def update_indicator_dropdown(tic):
-            indicators_names_l = tic.indicators_names_l
-            indicators_dropdown_l = options_for_dropdown(indicators_names_l)
-            return indicators_dropdown_l
-
-        def update_main_chart(main_chart_fig, chosen_ticker, tic):
-            plotly_fig = PlotlyFig(main_chart_fig)
-            if tic is None:  # spelnioine przy uruchomieniu programu
-                main_chart_fig = plotly_fig.remove_element_from_figure_data(chosen_ticker)
+            main_chart_fig = ticker_indicator_dd_update(chosen_ticker, dd_chosen_ticker, dd_chosen_indicator)
+            if dd_chosen_ticker.not_empty() is False:
+                title_h1_ticker = 'None ticker selected'
             else:
-                if tic.name in plotly_fig.traces_names and len(plotly_fig.traces_names) > 0:  # jesli wybrano usuniecie
-                    main_chart_fig = plotly_fig.remove_element_from_figure_data(chosen_ticker)
-                else:  # jesli wybrano nowy ticker
-                    x = tic.dates_y
-                    y = tic.Price_y.values
-                    main_chart_fig.add_trace(go.Scatter(
-                        x=x,
-                        y=y,
-                        name=tic.name
-                    ))
+                title_h1_ticker = dd_chosen_ticker.elements
+            return title_h1_ticker, main_chart_fig
+
+        @app.callback(
+            dash.Output(component_id='main_chart', component_property='figure'),
+            dash.Input(component_id='indicator_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_indicator(chosen_indicator):
+            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal dd_chosen_ticker, dd_chosen_indicator
+
+            main_chart_fig = ticker_indicator_dd_update(chosen_indicator, dd_chosen_indicator, dd_chosen_ticker)
             return main_chart_fig
 
-        tic = None
-        options = []
-        disabled = True
-
-        if chosen_ticker:
-            current_ticker = chosen_ticker[-1]
-            tic = Ticker(current_ticker, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
-            tic.set_df_year()
-            tic.create_indicators()
-
-            options = update_indicator_dropdown(tic)
-            disabled = False
-        main_chart_fig = update_main_chart(main_chart_fig, chosen_ticker, tic)
-
-        return options, disabled, main_chart_fig
-
+    tickers_list = ['GOOGL', 'META', 'NFLX']  # dodac jako argument
+    app = dash.Dash(__name__, pages_folder="", use_pages=True)
+    main_page(tickers_list)
     app.run_server(debug=True)
 
 
@@ -188,12 +157,8 @@ def dashboard():
     #print(adb.META.tables.year)
     #print(adb.META.get_df(wsj_conn))
 
-
-
-
-
-
 start_time = time.time()
+u.pandas_df_display_options()
 warnings.filterwarnings('ignore')
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')

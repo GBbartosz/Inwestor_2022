@@ -44,7 +44,7 @@ class Ticker:
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
         self.wsja_cursor, self.wsja_conn, self.wsja_engine = wsja_cursor, wsja_conn, wsja_engine
         sector_industry = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', self.wsj_conn).iloc[0, :].tolist()
-        self.secotor = sector_industry[0]
+        self.sector = sector_industry[0]
         self.industry = sector_industry[1]
         setattr(self, 'tables', TickerTables(ticker))
 

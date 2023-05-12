@@ -41,6 +41,13 @@ class Ticker:
         self.dates_q = None
         self.is_df_y = None
         self.is_df_q = None
+        self.ba_df_y = None
+        self.ba_df_q = None
+        self.bl_df_y = None
+        self.bl_df_q = None
+        self.cf_df_y = None
+        self.cf_df_q = None
+        self.indicators_names_l = None
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
         self.wsja_cursor, self.wsja_conn, self.wsja_engine = wsja_cursor, wsja_conn, wsja_engine
         sector_industry = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', self.wsj_conn).iloc[0, :].tolist()
@@ -96,6 +103,36 @@ class Ticker:
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.is_df_q = df
+
+    def set_balance_assets_df_year(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_y'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.ba_df_y = df
+
+    def set_balance_assets_df_quarter(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_q'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.ba_df_q = df
+
+    def set_balance_liabilities_df_year(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_y'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.bl_df_y = df
+
+    def set_balance_liabilities_df_quarter(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_q'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.bl_df_q = df
+
+    def set_cash_flow_df_year(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_y'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.cf_df_y = df
+
+    def set_cash_flow_df_quarter(self):
+        sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_q'
+        df = pd.read_sql(sql_query, self.wsj_conn)
+        self.cf_df_q = df
 
     # def get_df_quarter(self):
     #    return self.df_q

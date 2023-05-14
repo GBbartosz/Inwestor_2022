@@ -1,4 +1,5 @@
 import dash
+import pandas as pd
 import plotly.graph_objects as go
 import time
 import warnings
@@ -42,6 +43,65 @@ class ButtonChosenPeriod:
         else:
             res = val_q
         return res
+
+
+class CurrentChooiceForFinStatement:
+    def __init__(self):
+        self.ticker_name = None
+        self.period = 'year'
+        self.b_chosen_period = None
+
+    def update(self, dd_chosen_ticker, b_chosen_period):
+        self.b_chosen_period = b_chosen_period
+        if len(dd_chosen_ticker.elements) == 1:
+            self.ticker_name = dd_chosen_ticker.elements[-1]
+
+    def get_df(self, chosen_statement=None):
+        global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+
+        # single albo multi wybor w dropdown
+        if chosen_statement is not None and isinstance(chosen_statement, str) is False:
+            chosen_statement = chosen_statement[0]
+
+        if self.ticker_name is None:
+            df = pd.DataFrame()
+        else:
+            tic = Ticker(self.ticker_name, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            if chosen_statement is None:
+                self.b_chosen_period.condition_return_val(tic.set_is_df_y, tic.set_is_df_q)()
+                df = self.b_chosen_period.condition_return_val(tic.is_df_y, tic.is_df_q)
+            else:
+                get_chosen_fin_st(chosen_statement,
+                                  self.b_chosen_period.condition_return_val(tic.set_is_df_y, tic.set_is_df_q),
+                                  self.b_chosen_period.condition_return_val(tic.set_ba_df_y, tic.set_ba_df_q),
+                                  self.b_chosen_period.condition_return_val(tic.set_bl_df_y, tic.set_bl_df_q),
+                                  self.b_chosen_period.condition_return_val(tic.set_cf_df_y, tic.set_cf_df_q))()
+                df = get_chosen_fin_st(chosen_statement,
+                                       self.b_chosen_period.condition_return_val(tic.is_df_y, tic.is_df_q),
+                                       self.b_chosen_period.condition_return_val(tic.ba_df_y, tic.ba_df_q),
+                                       self.b_chosen_period.condition_return_val(tic.bl_df_y, tic.bl_df_q),
+                                       self.b_chosen_period.condition_return_val(tic.cf_df_y, tic.cf_df_q))
+        return df
+
+
+def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
+    res = None
+    if fin_st == 'income_statement':
+        res = x1
+    elif fin_st == 'balance_assets':
+        res = x2
+    elif fin_st == 'balance_liabilities':
+        res = x3
+    elif fin_st == 'cash_flow':
+        res = x4
+    return res
+
+
+def convert_df_to_datatable(df):
+    dt = None
+    if df.empty is False:
+        dt = df.to_dict('records'), [{"name": i, "id": i} for i in df.columns]
+    return dt
 
 
 def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other, b_chosen_period):
@@ -101,7 +161,7 @@ def options_for_dropdown(mylist):
 def all_options_for_dropdowns(tickers_list):
     global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
 
-    tic = Ticker(tickers_list[1], wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+    tic = Ticker(tickers_list[0], wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
     tic.set_df_year()
     tic.create_indicators()
     tickers_dropdown_l = options_for_dropdown(tickers_list)
@@ -109,15 +169,26 @@ def all_options_for_dropdowns(tickers_list):
     return tickers_dropdown_l, indicators_dropdown_l
 
 
-def navigation_panel():
-    pass
+def navigation_panel(current_page):
+
+    def create_button(txt, page):
+        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page)
+        return button
+
+    pages = {'Main': '', 'Financial statements': 'fin_st'}
+    buttons = []
+    for page_name in pages.keys():
+        if pages[page_name] != current_page:
+            buttons.append(create_button(page_name, pages[page_name]))
+    buttons_layout = dash.html.Div(children=buttons)
+    return buttons_layout
 
 
 def dashboard():
 
-    def main_page(tickers_list):
-        dd_chosen_ticker = DDChosen('ticker')
-        dd_chosen_indicator = DDChosen('indicator')
+    def main_page():
+        global tickers_l, dd_chosen_ticker, dd_chosen_indicator
+        page_id = ''
         b_chosen_period = ButtonChosenPeriod()
         tickers_dropdown_l, indicators_dropdown_l = all_options_for_dropdowns(tickers_list)
 
@@ -144,21 +215,24 @@ def dashboard():
                 style={'display': 'inline-block'}
             ),
             dash.dcc.Graph(id='main_chart', figure=go.Figure()),
-            dash.dcc.Link(
-                dash.html.Button('Navigate to "page-2"'),
-                href='/page2')
+            navigation_panel(page_id)
+            #dash.dcc.Link(
+            #    dash.html.Button('Navigate to "page-2"'),
+            #    href='/page2')
         ])
-        dash.register_page('main_page', path='/', layout=layout_main_page)
+        dash.register_page(page_id, path='/', layout=layout_main_page)
 
         @app.callback(
             dash.Output(component_id='h1_ticker_name', component_property='children'),
             dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
+            #dash.Output(component_id='fin_st_ticker_dd', component_property='options'),
             dash.Input(component_id='ticker_dd', component_property='value'),
             prevent_initial_call=True
         )
         def dropdown_selection_of_ticker(chosen_ticker):
-            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal dd_chosen_ticker, dd_chosen_indicator, b_chosen_period
+            global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l, \
+                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal b_chosen_period
 
             main_chart_fig = ticker_indicator_period_update(chosen_ticker, dd_chosen_ticker, dd_chosen_indicator,
                                                             b_chosen_period)
@@ -166,6 +240,9 @@ def dashboard():
                 title_h1_ticker = 'None ticker selected'
             else:
                 title_h1_ticker = dd_chosen_ticker.elements
+                fin_st_tickers_dropdown_l_update, indicators_dropdown_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
+                fin_st_tickers_dropdown_l = fin_st_tickers_dropdown_l_update
+            curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
             return title_h1_ticker, main_chart_fig
 
         @app.callback(
@@ -174,8 +251,8 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_selection_of_indicator(chosen_indicator):
-            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal dd_chosen_ticker, dd_chosen_indicator
+            global dd_chosen_ticker, dd_chosen_indicator, \
+                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
 
             main_chart_fig = ticker_indicator_period_update(chosen_indicator, dd_chosen_indicator, dd_chosen_ticker,
                                                             b_chosen_period)
@@ -188,52 +265,58 @@ def dashboard():
             prevent_initial_call=True
         )
         def year_quarter_button_action(click_num):
-            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal dd_chosen_ticker, dd_chosen_indicator, b_chosen_period
+            global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal b_chosen_period
 
             b_chosen_period.update(click_num)
             main_chart_fig = ticker_indicator_period_update(b_chosen_period.val, dd_chosen_ticker, dd_chosen_indicator,
                                                             b_chosen_period)
+            curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
             return b_chosen_period.val, main_chart_fig
 
-    def financial_statements_page(tickers_list, ticker_name):
-        tickers_dropdown_l, indicators_dropdown_l = all_options_for_dropdowns(tickers_list)
+    def financial_statements_page():
+        global tickers_l, dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l
+        page_id = 'fin_st'
         financial_statements_l = ['income_statement', 'balance_assets', 'balance_liabilities', 'cash_flow']
         fin_statement_dd_l = options_for_dropdown(financial_statements_l)
+        data_table = convert_df_to_datatable(curr_choice_for_fin_st.get_df())
 
-
-
-        #[dbo].[A_income_statement_q]
-        #[dbo].[A_balance_assets_q]
-        #[dbo].[A_balance_liabilities_q]
-        #[dbo].[A_cash_flow_q]
 
 
         layout_financial_statements_page = dash.html.Div([
+            #dash.dcc.Location(id='url', refresh=True),
             dash.html.H1(id='h1_ticker_name',
                          children='None ticker selected',
                          style={'width': '1200px', 'height': '40px'}),
             dash.html.Div(children=[
-                dash.dcc.Dropdown(id='ticker_dd',
-                                  options=tickers_dropdown_l,
-                                  placeholder='Select ticker',
-                                  multi=True,
-                                  style={'width': '480px', 'height': '40px'}),
-                dash.dcc.Dropdown(id='fin_statement_dd',
+                dash.dcc.Dropdown(id='fin_st_dd',
                                   options=fin_statement_dd_l,
-                                  placeholder='Select ticker',
-                                  multi=True,
+                                  placeholder='Select financial statement',
                                   style={'width': '480px', 'height': '40px'})]),
-            dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns])
+            dash.dash_table.DataTable(id='fin_st_table', data=data_table),
+            navigation_panel(page_id)])
+
+        dash.register_page(page_id, path='/fin_st', layout=layout_financial_statements_page)
+
+        @app.callback(
+            dash.Output(component_id='fin_st_table', component_property='data'),
+            dash.Input(component_id='fin_st_dd', component_property='value')
         )
+        def update_fin_st_data_table(chosen_fin_st):
+            global curr_choice_for_fin_st
+            if chosen_fin_st:
+                df = curr_choice_for_fin_st.get_df(chosen_fin_st)
+                dt = convert_df_to_datatable(df)
+            else:
+                df = curr_choice_for_fin_st.get_df()
+                dt = convert_df_to_datatable(df)
+            dt = dt[0]  # konieczne [0] nie moze byc w funkcji
+            return dt
 
 
-
-
-    tickers_list = ['GOOGL', 'META', 'NFLX']  # dodac jako argument
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
-    financial_statements_page(tickers_list, None)
-    main_page(tickers_list)
+    financial_statements_page()
+    main_page()
     app.run_server(debug=True)
 
 
@@ -247,6 +330,12 @@ def dashboard():
 start_time = time.time()
 u.pandas_df_display_options()
 warnings.filterwarnings('ignore')
+
+tickers_list = ['GOOGL', 'META', 'NFLX']  # dodac jako argument
+fin_st_tickers_dropdown_l = []
+dd_chosen_ticker = DDChosen('ticker')
+dd_chosen_indicator = DDChosen('indicator')
+curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
 dashboard()

@@ -94,42 +94,42 @@ class Ticker:
         self.df_q = df
         self.dates_q = df.columns[2:]
 
-    def set_income_statment_df_year(self):
+    def set_is_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_y'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.is_df_y = df
 
-    def set_income_statment_df_quarter(self):
+    def set_is_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.is_df_q = df
 
-    def set_balance_assets_df_year(self):
+    def set_ba_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_y'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.ba_df_y = df
 
-    def set_balance_assets_df_quarter(self):
+    def set_ba_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.ba_df_q = df
 
-    def set_balance_liabilities_df_year(self):
+    def set_bl_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_y'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.bl_df_y = df
 
-    def set_balance_liabilities_df_quarter(self):
+    def set_bl_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.bl_df_q = df
 
-    def set_cash_flow_df_year(self):
+    def set_cf_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_y'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.cf_df_y = df
 
-    def set_cash_flow_df_quarter(self):
+    def set_cf_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
         self.cf_df_q = df

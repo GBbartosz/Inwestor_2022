@@ -1,4 +1,5 @@
 import dash
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import time
@@ -12,6 +13,7 @@ class DDChosen:
     def __init__(self, name):
         self.elements = []
         self.name = name
+        self.elements_colors = []
 
     def update(self, new_element):
         if new_element in self.elements:
@@ -25,6 +27,12 @@ class DDChosen:
         else:
             res = False
         return res
+
+    def assign_color_to_ticker(self, ticker_name):
+        if ticker_name not in self.elements_colors:
+            self.elements_colors.append(ticker_name)
+            color = random_color()
+            setattr(self, ticker_name + '_color', color)
 
 
 class ButtonChosenPeriod:
@@ -97,6 +105,15 @@ def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
     return res
 
 
+def sort_fin_st_df_columns(df):
+    date_columns = [c for c in df.columns if c != 'index' and 'All' not in c]
+    date_columns.sort()
+    indicators_col = [c for c in df.columns if 'All' in c]
+    columns = indicators_col + date_columns
+    df = df[columns]
+    return df
+
+
 def convert_df_to_datatable(df):
     dt = None
     if df.empty is False:
@@ -104,29 +121,34 @@ def convert_df_to_datatable(df):
     return dt
 
 
+def random_color():
+    color = 'rgb' + str(tuple(np.random.choice(range(256), size=3)))
+    return color
+
+
 def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other, b_chosen_period):
 
     def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, b_chosen_period,
                           wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
 
-        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic):
+        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color):
             for i in ddchosen_obj_ind.elements:
                 indicator_period = b_chosen_period.condition_return_val('_y', '_q')
                 indicator_name = i + indicator_period
                 x = tic.dates_y
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + i
-                xs.append(x)
-                ys.append(y)
-                names.append(n)
-                main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n))
+                main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n, line=dict(color=color)))
 
+        n = 0
         for t in ddchosen_obj_tic.elements:
             tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
             set_period_type = b_chosen_period.condition_return_val(tic.set_df_year, tic.set_df_quarter)
             set_period_type()
             tic.create_indicators()
-            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic)
+            ddchosen_obj_tic.assign_color_to_ticker(t)
+            color = getattr(ddchosen_obj_tic, t + '_color')
+            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color)
 
     main_chart_fig = go.Figure()
 
@@ -171,8 +193,8 @@ def all_options_for_dropdowns(tickers_list):
 
 def navigation_panel(current_page):
 
-    def create_button(txt, page):
-        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page)
+    def create_button(txt, page, disabled):
+        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page, disabled=disabled)
         return button
 
     pages = {'Main': '', 'Financial statements': 'fin_st'}
@@ -188,7 +210,6 @@ def dashboard():
 
     def main_page():
         global tickers_l, dd_chosen_ticker, dd_chosen_indicator
-        page_id = ''
         b_chosen_period = ButtonChosenPeriod()
         tickers_dropdown_l, indicators_dropdown_l = all_options_for_dropdowns(tickers_list)
 
@@ -215,17 +236,14 @@ def dashboard():
                 style={'display': 'inline-block'}
             ),
             dash.dcc.Graph(id='main_chart', figure=go.Figure()),
-            navigation_panel(page_id)
-            #dash.dcc.Link(
-            #    dash.html.Button('Navigate to "page-2"'),
-            #    href='/page2')
+            dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
         ])
-        dash.register_page(page_id, path='/', layout=layout_main_page)
+        dash.register_page('Main', path='/', layout=layout_main_page)
 
         @app.callback(
             dash.Output(component_id='h1_ticker_name', component_property='children'),
             dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
-            #dash.Output(component_id='fin_st_ticker_dd', component_property='options'),
+            dash.Output(component_id='button_link_to_finst', component_property='disabled'),
             dash.Input(component_id='ticker_dd', component_property='value'),
             prevent_initial_call=True
         )
@@ -234,6 +252,7 @@ def dashboard():
                 wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
             nonlocal b_chosen_period
 
+            finst_link_disabled = True
             main_chart_fig = ticker_indicator_period_update(chosen_ticker, dd_chosen_ticker, dd_chosen_indicator,
                                                             b_chosen_period)
             if dd_chosen_ticker.not_empty() is False:
@@ -242,8 +261,9 @@ def dashboard():
                 title_h1_ticker = dd_chosen_ticker.elements
                 fin_st_tickers_dropdown_l_update, indicators_dropdown_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
                 fin_st_tickers_dropdown_l = fin_st_tickers_dropdown_l_update
+                finst_link_disabled = False
             curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
-            return title_h1_ticker, main_chart_fig
+            return title_h1_ticker, main_chart_fig, finst_link_disabled
 
         @app.callback(
             dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
@@ -276,16 +296,12 @@ def dashboard():
 
     def financial_statements_page():
         global tickers_l, dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l
-        page_id = 'fin_st'
         financial_statements_l = ['income_statement', 'balance_assets', 'balance_liabilities', 'cash_flow']
         fin_statement_dd_l = options_for_dropdown(financial_statements_l)
         data_table = convert_df_to_datatable(curr_choice_for_fin_st.get_df())
 
-
-
         layout_financial_statements_page = dash.html.Div([
-            #dash.dcc.Location(id='url', refresh=True),
-            dash.html.H1(id='h1_ticker_name',
+            dash.html.H1(id='finst_h1_ticker_name',
                          children='None ticker selected',
                          style={'width': '1200px', 'height': '40px'}),
             dash.html.Div(children=[
@@ -294,24 +310,27 @@ def dashboard():
                                   placeholder='Select financial statement',
                                   style={'width': '480px', 'height': '40px'})]),
             dash.dash_table.DataTable(id='fin_st_table', data=data_table),
-            navigation_panel(page_id)])
+            dash.dcc.Link(dash.html.Button('Main'), id='link_to_main', href='/')])
 
-        dash.register_page(page_id, path='/fin_st', layout=layout_financial_statements_page)
+        dash.register_page('finst', path='/finst', layout=layout_financial_statements_page)
 
         @app.callback(
             dash.Output(component_id='fin_st_table', component_property='data'),
+            dash.Output(component_id='finst_h1_ticker_name', component_property='children'),
             dash.Input(component_id='fin_st_dd', component_property='value')
         )
         def update_fin_st_data_table(chosen_fin_st):
             global curr_choice_for_fin_st
             if chosen_fin_st:
                 df = curr_choice_for_fin_st.get_df(chosen_fin_st)
+                df = sort_fin_st_df_columns(df)
                 dt = convert_df_to_datatable(df)
             else:
                 df = curr_choice_for_fin_st.get_df()
+                df = sort_fin_st_df_columns(df)
                 dt = convert_df_to_datatable(df)
             dt = dt[0]  # konieczne [0] nie moze byc w funkcji
-            return dt
+            return dt, curr_choice_for_fin_st.ticker_name
 
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)

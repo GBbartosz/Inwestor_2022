@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 import time
 import warnings
 
+from plotly.validators.scatter.marker import SymbolValidator
+
 from tickerclass import Ticker
 import utilities as u
 
@@ -14,6 +16,9 @@ class DDChosen:
         self.elements = []
         self.name = name
         self.elements_colors = []
+        self.elements_markers = []
+        self.marker_symbols = [m for m in SymbolValidator().values if isinstance(m, int)]
+        self.marker_symbols_n = 0
 
     def update(self, new_element):
         if new_element in self.elements:
@@ -33,6 +38,12 @@ class DDChosen:
             self.elements_colors.append(ticker_name)
             color = random_color()
             setattr(self, ticker_name + '_color', color)
+
+    def assign_marker_to_indicator(self, indicator_name):
+        if indicator_name not in self.elements_markers:
+            self.elements_markers.append(indicator_name)
+            setattr(self, indicator_name + '_marker', self.marker_symbols[self.marker_symbols_n])
+            self.marker_symbols_n += 1
 
 
 class ButtonChosenPeriod:
@@ -132,13 +143,16 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
                           wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
 
         def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color):
+
             for i in ddchosen_obj_ind.elements:
+                ddchosen_obj_ind.assign_marker_to_indicator(i)
+                marker = getattr(ddchosen_obj_ind, i + '_marker')
                 indicator_period = b_chosen_period.condition_return_val('_y', '_q')
                 indicator_name = i + indicator_period
                 x = tic.dates_y
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + i
-                main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n, line=dict(color=color)))
+                main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n, line=dict(color=color), marker_symbol=marker))
 
         n = 0
         for t in ddchosen_obj_tic.elements:
@@ -224,18 +238,19 @@ def dashboard():
                                   options=tickers_dropdown_l,
                                   placeholder='Select ticker',
                                   multi=True,
-                                  style={'width': '480px', 'height': '40px'}),
+                                  style={'width': '600px', 'height': '80px', 'display': 'inline-block'}),
                 dash.dcc.Dropdown(id='indicator_dd',
                                   options=indicators_dropdown_l,
                                   placeholder='Select indicator',
                                   multi=True,
-                                  style={'width': '480px', 'height': '40px'}),
+                                  style={'width': '600px', 'height': '80px', 'display': 'inline-block'}),
                 dash.html.Button(children='year',
                                  id='year_quarter_button',
-                                 n_clicks=0)],
+                                 n_clicks=0,
+                                 style={'width': '80px', 'height': '80px', 'display': 'inline-block', 'vertical-align': 'top'})],
                 style={'display': 'inline-block'}
             ),
-            dash.dcc.Graph(id='main_chart', figure=go.Figure()),
+            dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px', 'height': '800px'}),
             dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
         ])
         dash.register_page('Main', path='/', layout=layout_main_page)
@@ -325,12 +340,16 @@ def dashboard():
                 df = curr_choice_for_fin_st.get_df(chosen_fin_st)
                 df = sort_fin_st_df_columns(df)
                 dt = convert_df_to_datatable(df)
+                h1_val = curr_choice_for_fin_st.ticker_name + ' ' + chosen_fin_st
             else:
                 df = curr_choice_for_fin_st.get_df()
                 df = sort_fin_st_df_columns(df)
                 dt = convert_df_to_datatable(df)
+                h1_val = curr_choice_for_fin_st.ticker_name + ' income statement'
             dt = dt[0]  # konieczne [0] nie moze byc w funkcji
-            return dt, curr_choice_for_fin_st.ticker_name
+
+
+            return dt, h1_val
 
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)

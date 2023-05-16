@@ -2,7 +2,6 @@ import pandas as pd
 import utilities as u
 
 
-
 def transform_dates_to_quarters(df):
 
     def get_month_year(x):
@@ -11,16 +10,28 @@ def transform_dates_to_quarters(df):
         year = x[2]
         return month, year
 
+    #cols = df.columns
+    #cols = [x for x in cols if x not in ['Ticker', 'Indicators', 'Current']]
+    #month_name_quarter_dict = u.month_name_quarter_dict()
+    #new_cols = []
+    #for c in cols:
+    #    m, y = get_month_year(c)
+    #    q = month_name_quarter_dict[m]
+    #    yq = y + '-' + q
+    #    new_cols.append(yq)
+    #df.columns = ['Ticker', 'Indicators'] + new_cols + ['Current']
+
     cols = df.columns
-    cols = [x for x in cols if x  not in ['Ticker', 'Indicators', 'Current']]
+    static_cols = [x for x in cols if '-202' not in x]
+    date_cols = [x for x in cols if '-202' in x]
     month_name_quarter_dict = u.month_name_quarter_dict()
     new_cols = []
-    for c in cols:
+    for c in date_cols:
         m, y = get_month_year(c)
         q = month_name_quarter_dict[m]
         yq = y + '-' + q
         new_cols.append(yq)
-    df.columns = ['Ticker', 'Indicators'] + new_cols + ['Current']
+    df.columns = static_cols + new_cols
     return df
 
 
@@ -91,8 +102,9 @@ class Ticker:
     def set_df_quarter(self):
         sql_query = f'SELECT * FROM {self.tables.quarter}'
         df = pd.read_sql(sql_query, self.wsja_conn)
-        self.df_q = df
+        self.df_q = transform_dates_to_quarters(df)
         self.dates_q = df.columns[2:]
+        print(self.dates_q)
 
     def set_is_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_y'
@@ -102,7 +114,7 @@ class Ticker:
     def set_is_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.is_df_q = df
+        self.is_df_q = transform_dates_to_quarters(df)
 
     def set_ba_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_y'
@@ -112,7 +124,7 @@ class Ticker:
     def set_ba_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.ba_df_q = df
+        self.ba_df_q = transform_dates_to_quarters(df)
 
     def set_bl_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_y'
@@ -122,7 +134,7 @@ class Ticker:
     def set_bl_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.bl_df_q = df
+        self.bl_df_q = transform_dates_to_quarters(df)
 
     def set_cf_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_y'
@@ -132,7 +144,7 @@ class Ticker:
     def set_cf_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.cf_df_q = df
+        self.cf_df_q = transform_dates_to_quarters(df)
 
     # def get_df_quarter(self):
     #    return self.df_q

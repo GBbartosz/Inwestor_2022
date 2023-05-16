@@ -47,14 +47,20 @@ class DDChosen:
 
 
 class ButtonChosenPeriod:
-    def __init__(self):
-        self.val = 'year'
+    def __init__(self, current_period='year'):
+        self.val = current_period
 
-    def update(self, click_num):
-        if (click_num / 2).is_integer():
-            self.val = 'year'
+    def update(self, click_num, current_period=None):
+        if click_num == 1:
+            if current_period == 'quarter':
+                self.val = 'year'
+            else:
+                self.val = 'quarter'
         else:
-            self.val = 'quarter'
+            if self.val == 'year':
+                self.val = 'quarter'
+            else:
+                self.val = 'year'
 
     def condition_return_val(self, val_y, val_q):
         if self.val == 'year':
@@ -69,15 +75,18 @@ class CurrentChooiceForFinStatement:
         self.ticker_name = None
         self.period = 'year'
         self.b_chosen_period = None
+        self.chosen_fin_statement = None
 
     def update(self, dd_chosen_ticker, b_chosen_period):
         self.b_chosen_period = b_chosen_period
+        self.period = b_chosen_period.val
         if len(dd_chosen_ticker.elements) == 1:
             self.ticker_name = dd_chosen_ticker.elements[-1]
 
     def get_df(self, chosen_statement=None):
         global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
 
+        self.chosen_fin_statement = chosen_statement
         # single albo multi wybor w dropdown
         if chosen_statement is not None and isinstance(chosen_statement, str) is False:
             chosen_statement = chosen_statement[0]
@@ -149,7 +158,7 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
                 marker = getattr(ddchosen_obj_ind, i + '_marker')
                 indicator_period = b_chosen_period.condition_return_val('_y', '_q')
                 indicator_name = i + indicator_period
-                x = tic.dates_y
+                x = getattr(tic, 'dates' + indicator_period)
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + i
                 main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n, line=dict(color=color), marker_symbol=marker))
@@ -205,52 +214,61 @@ def all_options_for_dropdowns(tickers_list):
     return tickers_dropdown_l, indicators_dropdown_l
 
 
-def navigation_panel(current_page):
-
-    def create_button(txt, page, disabled):
-        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page, disabled=disabled)
-        return button
-
-    pages = {'Main': '', 'Financial statements': 'fin_st'}
-    buttons = []
-    for page_name in pages.keys():
-        if pages[page_name] != current_page:
-            buttons.append(create_button(page_name, pages[page_name]))
-    buttons_layout = dash.html.Div(children=buttons)
-    return buttons_layout
+#def navigation_panel(current_page):
+#
+#    def create_button(txt, page, disabled):
+#        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page, disabled=disabled)
+#        return button
+#
+#    pages = {'Main': '', 'Financial statements': 'fin_st'}
+#    buttons = []
+#    for page_name in pages.keys():
+#        if pages[page_name] != current_page:
+#            buttons.append(create_button(page_name, pages[page_name]))
+#    buttons_layout = dash.html.Div(children=buttons)
+#    return buttons_layout
 
 
 def dashboard():
 
     def main_page():
         global tickers_l, dd_chosen_ticker, dd_chosen_indicator
-        b_chosen_period = ButtonChosenPeriod()
         tickers_dropdown_l, indicators_dropdown_l = all_options_for_dropdowns(tickers_list)
+        b_chosen_period = ButtonChosenPeriod()
 
         layout_main_page = dash.html.Div([
             dash.html.Div(
                 dash.html.H1(id='h1_ticker_name',
                              children='None ticker selected',
-                             style={'width': '1200px', 'height': '40px'})
+                             style={'width': '1200px',
+                                    'height': '40px'})
             ),
             dash.html.Div(children=[
                 dash.dcc.Dropdown(id='ticker_dd',
                                   options=tickers_dropdown_l,
                                   placeholder='Select ticker',
                                   multi=True,
-                                  style={'width': '600px', 'height': '80px', 'display': 'inline-block'}),
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
                 dash.dcc.Dropdown(id='indicator_dd',
                                   options=indicators_dropdown_l,
                                   placeholder='Select indicator',
                                   multi=True,
-                                  style={'width': '600px', 'height': '80px', 'display': 'inline-block'}),
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
                 dash.html.Button(children='year',
                                  id='year_quarter_button',
                                  n_clicks=0,
-                                 style={'width': '80px', 'height': '80px', 'display': 'inline-block', 'vertical-align': 'top'})],
-                style={'display': 'inline-block'}
+                                 style={'width': '80px',
+                                        'height': '80px',
+                                        'display': 'inline-block',
+                                        'vertical-align': 'top'})],
+                          style={'display': 'inline-block'}
             ),
-            dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px', 'height': '800px'}),
+            dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px',
+                                                                       'height': '800px'}),
             dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
         ])
         dash.register_page('Main', path='/', layout=layout_main_page)
@@ -300,7 +318,8 @@ def dashboard():
             prevent_initial_call=True
         )
         def year_quarter_button_action(click_num):
-            global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, \
+                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
             nonlocal b_chosen_period
 
             b_chosen_period.update(click_num)
@@ -311,28 +330,41 @@ def dashboard():
 
     def financial_statements_page():
         global tickers_l, dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l
+
         financial_statements_l = ['income_statement', 'balance_assets', 'balance_liabilities', 'cash_flow']
         fin_statement_dd_l = options_for_dropdown(financial_statements_l)
+        finst_b_chosen_period = ButtonChosenPeriod(curr_choice_for_fin_st.period)
         data_table = convert_df_to_datatable(curr_choice_for_fin_st.get_df())
 
         layout_financial_statements_page = dash.html.Div([
             dash.html.H1(id='finst_h1_ticker_name',
                          children='None ticker selected',
-                         style={'width': '1200px', 'height': '40px'}),
+                         style={'width': '1200px',
+                                'height': '40px'}),
             dash.html.Div(children=[
                 dash.dcc.Dropdown(id='fin_st_dd',
                                   options=fin_statement_dd_l,
                                   placeholder='Select financial statement',
-                                  style={'width': '480px', 'height': '40px'})]),
+                                  style={'width': '480px',
+                                         'height': '40px',
+                                         'display': 'inline-block'}),
+                dash.html.Button(id='finst_year_quarter_button',
+                                 children=curr_choice_for_fin_st.period,
+                                 n_clicks=0,
+                                 style={'width': '80px',
+                                        'height': '40px',
+                                        'display': 'inline-block',
+                                        'vertical-align': 'top'})]),
             dash.dash_table.DataTable(id='fin_st_table', data=data_table),
             dash.dcc.Link(dash.html.Button('Main'), id='link_to_main', href='/')])
 
         dash.register_page('finst', path='/finst', layout=layout_financial_statements_page)
 
         @app.callback(
+            dash.Output(component_id='finst_year_quarter_button', component_property='children'),
             dash.Output(component_id='fin_st_table', component_property='data'),
             dash.Output(component_id='finst_h1_ticker_name', component_property='children'),
-            dash.Input(component_id='fin_st_dd', component_property='value')
+            dash.Input(component_id='fin_st_dd', component_property='value'),
         )
         def update_fin_st_data_table(chosen_fin_st):
             global curr_choice_for_fin_st
@@ -347,17 +379,30 @@ def dashboard():
                 dt = convert_df_to_datatable(df)
                 h1_val = curr_choice_for_fin_st.ticker_name + ' income statement'
             dt = dt[0]  # konieczne [0] nie moze byc w funkcji
+            return curr_choice_for_fin_st.period, dt, h1_val
 
+        @app.callback(
+            dash.Output(component_id='finst_year_quarter_button', component_property='children', allow_duplicate=True),
+            dash.Output(component_id='fin_st_table', component_property='data', allow_duplicate=True),
+            dash.Input(component_id='finst_year_quarter_button', component_property='n_clicks'),
+            prevent_initial_call=True
+        )
+        def finst_year_quarter_button_action(click_num):
+            global curr_choice_for_fin_st, dd_chosen_ticker
+            nonlocal finst_b_chosen_period
+            finst_b_chosen_period.update(click_num, curr_choice_for_fin_st.period)
+            curr_choice_for_fin_st.update(dd_chosen_ticker, finst_b_chosen_period)
+            df = curr_choice_for_fin_st.get_df(curr_choice_for_fin_st.chosen_fin_statement)
+            df = sort_fin_st_df_columns(df)
+            dt = convert_df_to_datatable(df)
+            dt = dt[0]
 
-            return dt, h1_val
-
+            return finst_b_chosen_period.val, dt
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     financial_statements_page()
     main_page()
     app.run_server(debug=True)
-
-
 
     #indicators_dict = get_indicators_dict(wsj_conn)
     #sql_analysis_tables = get_all_analysis_tables(cursor)
@@ -377,7 +422,6 @@ curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
 dashboard()
-#analyse_chart()
 end_time = time.time()
 print(end_time - start_time)
 

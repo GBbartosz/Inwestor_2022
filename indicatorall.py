@@ -1,5 +1,8 @@
+import pandas as pd
+
 import utilities as u
 from tickerclass import Ticker
+import plotly.graph_objs as go
 
 def get_all_analysis_tables(cursor):
     sql_table_list = u.get_all_tables(cursor)
@@ -17,6 +20,10 @@ class IndicatorAll:
         self.tic = None
         self.statement = None
         self.period = None
+
+        rows = wsja_cursor.execute('SELECT Indicators from wsja.dbo.analysis_META_year').fetchall()
+        self.indicators_l = [r[0] for r in rows]
+
 
 
     def set_data(self):
@@ -89,5 +96,32 @@ class IndicatorAll:
     #        indicators_dict[indicator] = index
     #    print(indicators_dict)
     #    return indicators_dict
+
+wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
+wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
+tickers_list = ['GOOGL', 'META', 'NFLX']
+
+ind = IndicatorAll(tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+print(ind.indicators_l)
+
+#ind.EBIT.year
+
+data=pd.DataFrame({'dates': ['2022', '2023', '2022', '2023', '2022', '2023'],
+                   'vals': [1, 1.2, 1.7, 1.8, 3, 2.8],
+                   'ticker': ['META', 'META', 'GOOGL', 'GOOGL', 'NETFLIX', 'NETFLIX']})
+
+data = data.pivot(index='ticker', columns='dates')['vals'].fillna(0)
+
+print(data)
+
+fig = go.Figure()
+for tic in data.index:
+    print(data[data.index == tic].iloc[0, :].tolist())
+    fig.add_trace(go.Scatter(x=data.columns,
+                             y=data[data.index == tic].iloc[0, :].tolist(),
+                             text=tic,
+                             mode='lines+markers',
+                             line = dict(shape = 'linear', color = 'rgb(205, 12, 24)', width= 0.3, dash = 'dash')))
+fig.show()
 
 

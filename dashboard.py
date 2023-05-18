@@ -158,10 +158,12 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
                 marker = getattr(ddchosen_obj_ind, i + '_marker')
                 indicator_period = b_chosen_period.condition_return_val('_y', '_q')
                 indicator_name = i + indicator_period
-                x = getattr(tic, 'dates' + indicator_period)
+                x = getattr(tic, 'dates' + indicator_period).values
+                x.sort()
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + i
                 main_chart_fig.add_trace(go.Scatter(x=x, y=y, name=n, line=dict(color=color), marker_symbol=marker))
+            main_chart_fig.update_xaxes(type='category')
 
         n = 0
         for t in ddchosen_obj_tic.elements:

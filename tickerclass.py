@@ -2,39 +2,6 @@ import pandas as pd
 import utilities as u
 
 
-def transform_dates_to_quarters(df):
-
-    def get_month_year(x):
-        x = x.split('-')
-        month = x[1]
-        year = x[2]
-        return month, year
-
-    #cols = df.columns
-    #cols = [x for x in cols if x not in ['Ticker', 'Indicators', 'Current']]
-    #month_name_quarter_dict = u.month_name_quarter_dict()
-    #new_cols = []
-    #for c in cols:
-    #    m, y = get_month_year(c)
-    #    q = month_name_quarter_dict[m]
-    #    yq = y + '-' + q
-    #    new_cols.append(yq)
-    #df.columns = ['Ticker', 'Indicators'] + new_cols + ['Current']
-
-    cols = df.columns
-    static_cols = [x for x in cols if '-202' not in x]
-    date_cols = [x for x in cols if '-202' in x]
-    month_name_quarter_dict = u.month_name_quarter_dict()
-    new_cols = []
-    for c in date_cols:
-        m, y = get_month_year(c)
-        q = month_name_quarter_dict[m]
-        yq = y + '-' + q
-        new_cols.append(yq)
-    df.columns = static_cols + new_cols
-    return df
-
-
 def dictionary_values_to_list(mydict):
     return list(mydict.values())
 
@@ -82,12 +49,11 @@ class Ticker:
                 self.name = name
                 setattr(self, 'values', dictionary_values_to_list(mdict))
                 setattr(self, 'dates', dictionary_keys_to_list(mdict))
-                #return mdict
 
         if self.df_y is not None:
             create_indicators2(self.df_y, '_y')
         if self.df_q is not None:
-            self.df_q = transform_dates_to_quarters(self.df_q)
+            self.df_q = u.get_transform_dates_to_quarters(self.df_q)
             create_indicators2(self.df_q, '_q')
 
     def set_df_year(self):
@@ -96,15 +62,13 @@ class Ticker:
         self.df_y = df
         self.dates_y = df.columns[2:]
 
-    # def get_df_year(self):
-    #    return self.df_y
-
     def set_df_quarter(self):
         sql_query = f'SELECT * FROM {self.tables.quarter}'
         df = pd.read_sql(sql_query, self.wsja_conn)
-        self.df_q = transform_dates_to_quarters(df)
+        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = static_cols + new_cols
+        self.df_q = df
         self.dates_q = df.columns[2:]
-        print(self.dates_q)
 
     def set_is_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_y'
@@ -114,7 +78,9 @@ class Ticker:
     def set_is_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.is_df_q = transform_dates_to_quarters(df)
+        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = static_cols + new_cols
+        self.is_df_q = df
 
     def set_ba_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_y'
@@ -124,7 +90,9 @@ class Ticker:
     def set_ba_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.ba_df_q = transform_dates_to_quarters(df)
+        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = static_cols + new_cols
+        self.ba_df_q = df
 
     def set_bl_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_y'
@@ -134,7 +102,9 @@ class Ticker:
     def set_bl_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.bl_df_q = transform_dates_to_quarters(df)
+        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = static_cols + new_cols
+        self.bl_df_q = df
 
     def set_cf_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_y'
@@ -144,10 +114,9 @@ class Ticker:
     def set_cf_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        self.cf_df_q = transform_dates_to_quarters(df)
-
-    # def get_df_quarter(self):
-    #    return self.df_q
+        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = static_cols + new_cols
+        self.cf_df_q = df
 
 
 class TickerTables:

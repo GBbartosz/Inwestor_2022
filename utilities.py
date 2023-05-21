@@ -344,7 +344,7 @@ def month_name_num_dict():
     return month_dict
 
 
-def month_name_quarter_dict():
+def get_month_name_quarter_dict():
     month_dict = {'Jan': '1',
                   'Feb': '1',
                   'Mar': '1',
@@ -657,3 +657,23 @@ def get_total_number_and_range_of_all_tickers(tickers_list):
     print(total_number)
     return total_number, total_number_range
 
+
+def get_transform_dates_to_quarters(cols):
+
+    def get_month_year(x):
+        x = x.split('-')
+        month = x[1]
+        year = x[2]
+        return month, year
+
+    static_cols = [x for x in cols if '-202' not in x]
+    date_cols = [x for x in cols if '-202' in x]
+    month_name_quarter_dict = get_month_name_quarter_dict()
+    new_dates_cols = []
+    for c in date_cols:
+        m, y = get_month_year(c)
+        q = month_name_quarter_dict[m]
+        yq = y + '-' + q
+        new_dates_cols.append(yq)
+
+    return static_cols, new_dates_cols

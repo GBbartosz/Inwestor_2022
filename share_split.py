@@ -66,7 +66,6 @@ def handle_share_split(df, sql_df, cursor, table_name):
                                     '''.format(table_name, col, v, sql_df_indicators_column_name, share_ind)
                     cursor.execute(sql_update_statement)
             diff_dict[share_ind] = diff_l
-
     if len(only_sql_columns) > 0:
         for share_ind in shares_indicators:
             if diff_dict[share_ind]:

@@ -119,7 +119,7 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
     link_insert = ticker
     link_insert_options_wsj = ['XE/XETR/' + ticker, 'LU/XLUX/' + ticker]
     link_insert_options_yahoo = [ticker + '.DE']
-    validation_wsj = ['All values USD', 'All values EUR']
+    validation_wsj = ['All values USD', 'All values EUR', 'All values HKD']
     validation_yahoo = ['Date']
 
     url_check_list_wsj = validate_url_list(url_empty_check_list_wsj, link_insert, link_insert_options_wsj,
@@ -326,7 +326,8 @@ def update(ticker, ticker_tables):
         if num == 4 or num == 5:
             for d in df:
                 if d.columns[0] in ['All values USD Thousands.', 'All values USD Millions.',
-                                    'All values EUR Thousands.', 'All values EUR Millions.']:
+                                    'All values EUR Thousands.', 'All values EUR Millions.',
+                                    'All values HKD Thousands.', 'All values HKD Millions.']:
                     df = d
         else:
             df = df[0]
@@ -418,14 +419,16 @@ def update_profile(ticker, url_check_list):
 
 
 def update_price(ticker):
+
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
+
     sql_table_list = u.get_all_tables(cursor)
     # frequencies = ['1mo', '1d']  # nie wyszukuje 1mo
     frequencies = ['1d']
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
 
-        price_df_url = download_and_prepare_price_history(ticker, frequency)
+        price_df_url = download_and_prepare_price_history(ticker, frequency, currency)
         if price_df_url is not None:
             if check_if_tables_exists(ticker_price_history, sql_table_list):
                 sql_select_all = 'SELECT * FROM [{0}]'.format(ticker_price_history)
@@ -441,15 +444,15 @@ def update_price(ticker):
                         insert_values = [ticker_price_history]
                         for c in df_diff.columns:
                             insert_values.append(df_diff[c].iloc[r])
-                        insert_values_without_str = insert_values[2:]
-                        for x in insert_values_without_str:
-                            if x is not None and x is not np.nan:
-                                sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
-                                             'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values)
-                                cursor.execute(sql_insert)
-                                cursor.commit()
+                        insert_values_without_index = [insert_values[0]] + insert_values[2:]
+                        #for x in insert_values_without_str:
+                        #    if x is not None and x is not np.nan:
+                        sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
+                                     'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values_without_index)
+                        cursor.execute(sql_insert)
+                        cursor.commit()
             else:
-                price_df = download_and_prepare_price_history(ticker, frequency)
+                price_df = download_and_prepare_price_history(ticker, frequency, currency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)
 
     wsj_conn.close()

@@ -677,3 +677,23 @@ def get_transform_dates_to_quarters(cols):
         new_dates_cols.append(yq)
 
     return static_cols, new_dates_cols
+
+
+def get_stock_currency(ticker_name, cursor):
+    sql_query = f'''
+                SELECT name AS COLUMN_NAME
+                FROM sys.columns
+                WHERE object_id = OBJECT_ID(\'[wsj].[dbo].[{ticker_name}_income_statement_y]\')'''
+    cursor.execute(sql_query)
+    res = cursor.fetchall()[1][0]
+    currency = None
+    if 'Fiscal year' in res:  # na wypadek innej nazwy kolumny
+        if 'USD' in res:
+            currency = 'USD'
+        elif 'EUR' in res:
+            currency = 'EUR'
+        elif 'HKD' in res:
+            currency = 'HKD'
+    else:
+        print('ERROR! Nie znaleziono kolumny do pozyskania wartosci currency!')
+    return currency

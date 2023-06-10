@@ -658,7 +658,7 @@ def get_total_number_and_range_of_all_tickers(tickers_list):
     return total_number, total_number_range
 
 
-def get_transform_dates_to_quarters(cols):
+def get_transform_dates_to_quarters(headers):
 
     def get_month_year(x):
         x = x.split('-')
@@ -666,8 +666,8 @@ def get_transform_dates_to_quarters(cols):
         year = x[2]
         return month, year
 
-    static_cols = [x for x in cols if '-202' not in x]
-    date_cols = [x for x in cols if '-202' in x]
+    static_cols = [x for x in headers if '-20' not in x]
+    date_cols = [x for x in headers if '-20' in x]
     month_name_quarter_dict = get_month_name_quarter_dict()
     new_dates_cols = []
     for c in date_cols:
@@ -675,7 +675,9 @@ def get_transform_dates_to_quarters(cols):
         q = month_name_quarter_dict[m]
         yq = y + '-' + q
         new_dates_cols.append(yq)
-
+    if 'Current' in static_cols:
+        static_cols.remove('Current')
+        new_dates_cols = new_dates_cols + ['Current']
     return static_cols, new_dates_cols
 
 

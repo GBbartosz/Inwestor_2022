@@ -24,11 +24,19 @@ def quarters_generator():
 
 def years_generator():
     y = 2017
-    years_l =[]
-    while y <= datetime.datetime.today().year:
-        years_l.append()
+    years_l = []
+    current_year = datetime.datetime.today().year
+    while y <= current_year:
+        years_l.append(str(y))
         y += 1
     return years_l
+
+
+def get_all_indicators(wsja_cursor):
+    sql_query = f'SELECT Indicators FROM wsja.dbo.analysis_META_year'
+    wsja_cursor.execute(sql_query)
+    res = [x[0] for x in wsja_cursor.fetchall()]
+    return res
 
 
 def get_all_analysis_tables(cursor):
@@ -37,14 +45,30 @@ def get_all_analysis_tables(cursor):
     return analysis_tables
 
 
+def all_sectors_industries(tickers_list, wsj_cursor):
+    sectors = []
+    industries = []
+    for tic in tickers_list:
+        sql_query = f'SELECT * FROM wsj.dbo.{tic}_profile'
+        wsj_cursor.execute(sql_query)
+        profile_vals = wsj_cursor.fetchall()
+        sector = profile_vals[0][0]
+        sectors.append(sector)
+        industry = profile_vals[0][1]
+        industries.append(industry)
+    sectors = set(sectors)
+    industries = set(industries)
+    return sectors, industries
+
+
 class TicBranches:
-    def __init__(self, tickers_l):
+    def __init__(self, tickers_l, wsj_cursor):
         for tic in tickers_l:
-            setattr(self, tic, TicBranch(tic))
+            setattr(self, tic, TicBranch(tic, wsj_cursor))
 
 
 class TicBranch:
-    def __init__(self, tic_name):
+    def __init__(self, tic_name, wsj_cursor):
         def get_sector_industry():
                 sql_query = f'SELECT * FROM wsj.dbo.{self.tic_name}_profile'
                 wsj_cursor.execute(sql_query)
@@ -59,9 +83,9 @@ class TicBranch:
         get_sector_industry()
 
 
-
 class IndicatorAll:
-    def __init__(self, tickers_l, indicator, period, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
+    def __init__(self, tickers_l, indicator, period,
+                 wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
         self.indicator = indicator
         self.tickers_l = tickers_l
         self.period = period
@@ -80,43 +104,50 @@ class IndicatorAll:
         rows = wsja_cursor.execute('SELECT Indicators from wsja.dbo.analysis_META_year').fetchall()
         self.indicators_l = [r[0] for r in rows]
 
-
-
-
-
     def get_dictionary(self):
         # fulfill dictionary wiht indicator values from every ticker
         # ticker: [tic1, tic2], 2022-1: [1, 3]
-        self.dict = dict.fromkeys(['tickers'] + self.dates + ['Current'], [])
+        tic_branches = TicBranches(self.tickers_l, self.wsj_cursor)
+        self.dict = dict.fromkeys(['tickers', 'sector', 'industry'] + self.dates + ['Current'], [])
         for tic_name in self.tickers_l:
-
-
             sql_query = f'SELECT * FROM wsja.dbo.analysis_{tic_name}_{self.period} where indicators = \'{self.indicator}\''
             self.wsja_cursor.execute(sql_query)
             vals = list(self.wsja_cursor.fetchall()[0][2:])
-            headers = [i[0] for i in wsja_cursor.description]
-            static_cols, date_cols = u.get_transform_dates_to_quarters(headers)
-            date_cols = date_cols + [static_cols[-1]]
 
+            if self.period == 'quarter':
+                headers = [i[0] for i in self.wsja_cursor.description]
+                static_cols, date_cols = u.get_transform_dates_to_quarters(headers)  # transformacja dat kwartalnych
+            else:
+                headers = [i[0] for i in self.wsja_cursor.description]
+                static_cols = [x for x in headers if '20' not in x and x != 'Current']
+                date_cols = [x for x in headers if '20' in x or x == 'Current']
             self.dict['tickers'] = self.dict['tickers'] + [tic_name]
+            self.dict['sector'] = self.dict['sector'] + [getattr(tic_branches, tic_name).sector]
+            self.dict['industry'] = self.dict['industry'] + [getattr(tic_branches, tic_name).industry]
+
             tmp_dict = {}
             for col, val in zip(date_cols, vals):
                 tmp_dict[col] = val
             for k in self.dict.keys():
-                if k != 'tickers':
-                    if k not in date_cols and k:
-                        self.dict[k] = self.dict[k] + [None]
-                    else:
+                if k not in ['tickers', 'sector', 'industry']:
+                    if k in date_cols:
                         self.dict[k] = self.dict[k] + [tmp_dict[k]]
+                    else:
+                        self.dict[k] = self.dict[k] + [None]
 
     def get_x(self):
-        return list(self.df.columns)[1:]
+        return list(self.df.columns)[3:]
 
     def get_y(self):
-        return [x[1:] for x in self.df.values]
+        print([x[3:] for x in self.df.values])
+        return [x[3:] for x in self.df.values]
+
+    def get_sectors(self):
+        return self.df['sector'].tolist()
 
     def get_industries(self):
-        pass
+        return self.df['industry'].tolist()
+
 
 
 
@@ -191,16 +222,20 @@ class IndicatorAll:
     #    print(indicators_dict)
     #    return indicators_dict
 
+#u.pandas_df_display_options()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
 tickers_list = ['GOOGL', 'META', 'NFLX']
+#
 
-psq = IndicatorAll(tickers_list, 'P/S', 'quarter', wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+#get_all_indicators(wsja_cursor)
 
-print(TicBranches(tickers_list).META.sector)
-print(TicBranches(tickers_list).META.industry)
-print(psq.get_x())
-print(psq.get_y())
+#sectors, industries = all_sectors_industries(tickers_list)
+#
+psq = IndicatorAll(tickers_list, 'P/S', 'year', wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+#
+#print(psq.df)
+
 
 
 

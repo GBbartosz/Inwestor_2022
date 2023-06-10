@@ -7,8 +7,10 @@ import warnings
 
 from plotly.validators.scatter.marker import SymbolValidator
 
+from indicatorall import IndicatorAll, get_all_indicators
 from tickerclass import Ticker
 import utilities as u
+import dashboardlinks as dashblinks
 
 
 class DDChosen:
@@ -197,6 +199,26 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
     return main_chart_fig
 
 
+def create_indcomp_fig(tickers_list, chosen_indicator, b_chosen_period_value,
+                       wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
+
+    indall = IndicatorAll(tickers_list, chosen_indicator, b_chosen_period_value,
+                       wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+
+    x = indall.get_x()
+    ys = indall.get_y()
+    tickers = indall.tickers_l
+
+    indcomp_fig = go.Figure()
+    for y, ticker in zip(ys, tickers):
+        indcomp_fig.add_trace(go.Scatter(x=x,
+                                         y=y,
+                                         name=ticker,
+                                         mode='markers'))
+    indcomp_fig.update_xaxes(type='category')
+    return indcomp_fig
+
+
 def options_for_dropdown(mylist):
     newlist = []
     for i in mylist:
@@ -271,7 +293,9 @@ def dashboard():
             ),
             dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px',
                                                                        'height': '800px'}),
-            dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
+            #dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
+            dashblinks.link_finst(),
+            dashblinks.link_indicator_comparison()
         ])
         dash.register_page('Main', path='/', layout=layout_main_page)
 
@@ -398,12 +422,81 @@ def dashboard():
             df = sort_fin_st_df_columns(df)
             dt = convert_df_to_datatable(df)
             dt = dt[0]
-
             return finst_b_chosen_period.val, dt
+
+    def indicator_comparison():
+        global wsja_cursor
+        indicators_dropdown_l = options_for_dropdown(get_all_indicators(wsja_cursor))
+        indicator = None
+        b_chosen_period = ButtonChosenPeriod()
+
+        layout_indicator_comparison_page = dash.html.Div([
+            dash.html.Div(
+                dash.html.H1(id='h1_indicator',
+                             children='Please select indicator',
+                             style={'width': '1200px',
+                                    'height': '40px'})
+            ),
+            dash.html.Div(children=[
+                dash.dcc.Dropdown(id='indcomp_ind_dd',
+                                  options=indicators_dropdown_l,
+                                  placeholder='Select indicator',
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.html.Button(children='year',
+                                 id='indcomp_year_quarter_button',
+                                 n_clicks=0,
+                                 style={'width': '80px',
+                                        'height': '80px',
+                                        'display': 'inline-block',
+                                        'vertical-align': 'top'}),
+            ]),
+            dash.dcc.Graph(id='indcomp_chart', figure=go.Figure(), style={'width': '1800px',
+                                                                       'height': '800px'}),
+            dashblinks.link_main()
+        ])
+
+        dash.register_page('indcomp', path='/indcomp', layout=layout_indicator_comparison_page)
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_ind_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_indicator(chosen_indicator):
+            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal indicator, b_chosen_period
+
+            indicator = chosen_indicator
+            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val,
+                                             wsj_cursor, wsj_conn, wsj_engine,
+                                             wsja_cursor, wsja_conn, wsja_engine)
+            return indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_year_quarter_button', component_property='children'),
+            dash.Output(component_id='indcomp_chart', component_property='figure'),
+            dash.Input(component_id='indcomp_year_quarter_button', component_property='n_clicks'),
+            prevent_initial_call=True
+        )
+        def year_quarter_button_action(click_num):
+            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal indicator, b_chosen_period
+
+            b_chosen_period.update(click_num)
+            print(b_chosen_period.val)
+            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val,
+                                             wsj_cursor, wsj_conn, wsj_engine,
+                                             wsja_cursor, wsja_conn, wsja_engine)
+
+            return b_chosen_period.val, indcomp_fig
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     financial_statements_page()
     main_page()
+    indicator_comparison()
     app.run_server(debug=True)
 
     #indicators_dict = get_indicators_dict(wsj_conn)
@@ -418,8 +511,12 @@ warnings.filterwarnings('ignore')
 
 tickers_list = ['GOOGL', 'META', 'NFLX']  # dodac jako argument
 fin_st_tickers_dropdown_l = []
+
 dd_chosen_ticker = DDChosen('ticker')
 dd_chosen_indicator = DDChosen('indicator')
+
+
+
 curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')

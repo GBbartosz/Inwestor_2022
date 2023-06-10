@@ -53,11 +53,13 @@ class Ticker:
         if self.df_y is not None:
             create_indicators2(self.df_y, '_y')
         if self.df_q is not None:
-            self.df_q = u.get_transform_dates_to_quarters(self.df_q)
             create_indicators2(self.df_q, '_q')
 
     def set_df_year(self):
         sql_query = f'SELECT * FROM {self.tables.year}'
+        #self.wsja_cursor.execute(sql_query)
+        #columns = [col[0] for col in self.wsja_cursor.description]
+        #df = pd.DataFrame.from_records(self.wsja_cursor.fetchall(), columns=columns)
         df = pd.read_sql(sql_query, self.wsja_conn)
         self.df_y = df
         self.dates_y = df.columns[2:]

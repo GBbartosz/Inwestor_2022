@@ -114,6 +114,9 @@ class CurrentChooiceForFinStatement:
         return df
 
 
+
+
+
 def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
     res = None
     if fin_st == 'income_statement':
@@ -199,7 +202,7 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
     return main_chart_fig
 
 
-def create_indcomp_fig(tickers_list, chosen_indicator, b_chosen_period_value,
+def create_indcomp_fig(tickers_list, chosen_indicator, b_chosen_period_value, split_type,
                        wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
 
     indall = IndicatorAll(tickers_list, chosen_indicator, b_chosen_period_value,
@@ -207,13 +210,23 @@ def create_indcomp_fig(tickers_list, chosen_indicator, b_chosen_period_value,
 
     x = indall.get_x()
     ys = indall.get_y()
-    tickers = indall.tickers_l
 
+    if split_type == 'companies':
+        split_vals = indall.tickers_l
+    elif split_type == 'sectors':
+        split_vals = indall.get_sectors()
+    elif split_type == 'industries':
+        split_vals = indall.get_industries()
+
+    colors = indall.assign_colors(split_vals)
     indcomp_fig = go.Figure()
-    for y, ticker in zip(ys, tickers):
+    for y, split_val, color, tic in zip(ys, split_vals, colors, indall.tickers_l):
+        print(color)
         indcomp_fig.add_trace(go.Scatter(x=x,
                                          y=y,
-                                         name=ticker,
+                                         name=split_val,
+                                         hovertext=tic,
+                                         marker_color=color,
                                          mode='markers'))
     indcomp_fig.update_xaxes(type='category')
     return indcomp_fig
@@ -427,6 +440,8 @@ def dashboard():
     def indicator_comparison():
         global wsja_cursor
         indicators_dropdown_l = options_for_dropdown(get_all_indicators(wsja_cursor))
+        split_dd_l = options_for_dropdown(['companies', 'sectors', 'industries'])
+        split_type = 'companies'
         indicator = None
         b_chosen_period = ButtonChosenPeriod()
 
@@ -444,6 +459,13 @@ def dashboard():
                                   multi=False,
                                   style={'width': '600px',
                                          'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.dcc.Dropdown(id='indcomp_split_dd',
+                                  options=split_dd_l,
+                                  placeholder='Select split option',
+                                  multi=False,
+                                  style={'width': '200px',
+                                         'height': '40px',
                                          'display': 'inline-block'}),
                 dash.html.Button(children='year',
                                  id='indcomp_year_quarter_button',
@@ -467,12 +489,25 @@ def dashboard():
         )
         def dropdown_selection_of_indicator(chosen_indicator):
             global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indicator, b_chosen_period
+            nonlocal indicator, b_chosen_period, split_type
 
             indicator = chosen_indicator
-            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val,
-                                             wsj_cursor, wsj_conn, wsj_engine,
-                                             wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val, split_type,
+                                             wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            return indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_split_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_split_selection(chosen_split_type):
+            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            nonlocal indicator, b_chosen_period, split_type
+
+            split_type = chosen_split_type
+            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val, split_type,
+                                             wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
             return indcomp_fig
 
         @app.callback(
@@ -483,15 +518,16 @@ def dashboard():
         )
         def year_quarter_button_action(click_num):
             global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indicator, b_chosen_period
+            nonlocal indicator, b_chosen_period, split_type
 
             b_chosen_period.update(click_num)
             print(b_chosen_period.val)
-            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val,
-                                             wsj_cursor, wsj_conn, wsj_engine,
-                                             wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig = create_indcomp_fig(tickers_list, indicator, b_chosen_period.val, split_type,
+                                             wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
 
             return b_chosen_period.val, indcomp_fig
+
+
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     financial_statements_page()

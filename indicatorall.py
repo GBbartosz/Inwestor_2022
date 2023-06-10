@@ -3,6 +3,7 @@ import datetime
 import pandas as pd
 
 import utilities as u
+import seaborn as sns
 from tickerclass import Ticker
 import plotly.graph_objs as go
 
@@ -148,7 +149,15 @@ class IndicatorAll:
     def get_industries(self):
         return self.df['industry'].tolist()
 
-
+    def assign_colors(self, mylist):
+        #colors = sns.color_palette("Paired")
+        colors = u.colors()
+        dictinct_values = set(mylist)
+        if len(colors) < len(dictinct_values):
+            print('ERROR! lista unikalnych wartosci jest dluzsza od listy kolorow')
+        distinctval_color_dict = dict(zip(dictinct_values, colors))
+        res_colors = [distinctval_color_dict[x] for x in mylist]
+        return res_colors
 
 
     #def set_data(self):

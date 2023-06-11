@@ -703,8 +703,8 @@ def get_stock_currency(ticker_name, cursor):
 
 def colors():
     colors = [
-            'aqua', 'black', 'blue',
-            'blueviolet', 'brown', 'burlywood', 'cadetblue',
+            'aqua', 'blue', 'blueviolet',
+            'brown', 'burlywood', 'cadetblue',
             'chartreuse', 'chocolate', 'coral', 'cornflowerblue',
             'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
             'darkgoldenrod', 'darkgray', 'darkgrey', 'darkgreen',
@@ -714,7 +714,7 @@ def colors():
             'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
             'dimgray', 'dimgrey', 'dodgerblue', 'firebrick',
             'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro',
-            'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
+            'ghostwhite', 'gray', 'grey', 'green',
             'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo',
             'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
             'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
@@ -728,7 +728,7 @@ def colors():
             'mediumturquoise', 'mediumvioletred', 'midnightblue',
             'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy',
             'oldlace', 'olive', 'olivedrab', 'orange', 'orangered',
-            'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+            'orchid',  'palegreen', 'paleturquoise',
             'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink',
             'plum', 'powderblue', 'purple', 'red', 'rosybrown',
             'royalblue', 'rebeccapurple', 'saddlebrown', 'salmon',
@@ -736,6 +736,7 @@ def colors():
             'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
             'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
             'turquoise', 'violet', 'wheat', 'white', 'whitesmoke',
-            'yellow', 'yellowgreen']
+            'black', 'gold', 'goldenrod',
+            'yellow', 'yellowgreen', 'palegoldenrod',]
     # 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige', 'bisque', 'blanchedalmond'
     return colors

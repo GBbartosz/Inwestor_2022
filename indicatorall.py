@@ -1,11 +1,6 @@
 import datetime
-
 import pandas as pd
-
 import utilities as u
-import seaborn as sns
-from tickerclass import Ticker
-import plotly.graph_objs as go
 
 
 def quarters_generator():
@@ -85,14 +80,27 @@ class TicBranch:
 
 
 class IndicatorAll:
-    def __init__(self, tickers_l, indicator, period,
+    def __init__(self, tickers_l, indicator, industry, sector, period,
                  wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
-        self.indicator = indicator
-        self.tickers_l = tickers_l
-        self.period = period
+
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
         self.wsja_cursor, self.wsja_conn, self.wsja_engine = wsja_cursor, wsja_conn, wsja_engine
+        self.indicator = indicator
+        self.sector = sector
+        self.industry = industry
 
+        self.tic_branches = TicBranches(tickers_l, self.wsj_cursor)
+        self.filtered_tickers_l = []
+        self.filtered_sectors = set()
+        self.filtered_industries = set()
+        for tic in tickers_l:
+            tic_industry = getattr(self.tic_branches, tic).industry
+            tic_sector = getattr(self.tic_branches, tic).sector
+            if (len(self.industry) == 0 or tic_industry in self.industry) and (len(self.sector) == 0 or tic_sector in self.sector):
+                self.filtered_tickers_l.append(tic)
+                self.filtered_industries.add(tic_industry)
+                self.filtered_sectors.add(tic_sector)
+        self.period = period
         if self.period == 'year':
             self.dates = years_generator()
         else:
@@ -108,11 +116,12 @@ class IndicatorAll:
     def get_dictionary(self):
         # fulfill dictionary wiht indicator values from every ticker
         # ticker: [tic1, tic2], 2022-1: [1, 3]
-        tic_branches = TicBranches(self.tickers_l, self.wsj_cursor)
+
         self.dict = dict.fromkeys(['tickers', 'sector', 'industry'] + self.dates + ['Current'], [])
-        for tic_name in self.tickers_l:
+        for tic_name in self.filtered_tickers_l:
             sql_query = f'SELECT * FROM wsja.dbo.analysis_{tic_name}_{self.period} where indicators = \'{self.indicator}\''
             self.wsja_cursor.execute(sql_query)
+
             vals = list(self.wsja_cursor.fetchall()[0][2:])
 
             if self.period == 'quarter':
@@ -123,8 +132,8 @@ class IndicatorAll:
                 static_cols = [x for x in headers if '20' not in x and x != 'Current']
                 date_cols = [x for x in headers if '20' in x or x == 'Current']
             self.dict['tickers'] = self.dict['tickers'] + [tic_name]
-            self.dict['sector'] = self.dict['sector'] + [getattr(tic_branches, tic_name).sector]
-            self.dict['industry'] = self.dict['industry'] + [getattr(tic_branches, tic_name).industry]
+            self.dict['sector'] = self.dict['sector'] + [getattr(self.tic_branches, tic_name).sector]
+            self.dict['industry'] = self.dict['industry'] + [getattr(self.tic_branches, tic_name).industry]
 
             tmp_dict = {}
             for col, val in zip(date_cols, vals):
@@ -140,7 +149,6 @@ class IndicatorAll:
         return list(self.df.columns)[3:]
 
     def get_y(self):
-        print([x[3:] for x in self.df.values])
         return [x[3:] for x in self.df.values]
 
     def get_sectors(self):
@@ -232,16 +240,16 @@ class IndicatorAll:
     #    return indicators_dict
 
 #u.pandas_df_display_options()
-wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
-tickers_list = ['GOOGL', 'META', 'NFLX']
+#wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
+#wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
+#tickers_list = ['GOOGL', 'META', 'NFLX']
 #
 
 #get_all_indicators(wsja_cursor)
 
 #sectors, industries = all_sectors_industries(tickers_list)
 #
-psq = IndicatorAll(tickers_list, 'P/S', 'year', wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+#psq = IndicatorAll(tickers_list, 'P/S', 'year', wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
 #
 #print(psq.df)
 

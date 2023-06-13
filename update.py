@@ -195,7 +195,6 @@ def yf_price_data_timeliness(df):
 def update(ticker, ticker_tables):
     global unsuccessful
     unsuccessful = None
-    #print(ticker)
 
     income_statement_positions = ['Sales/Revenue', 'Sales Growth', 'Cost of Goods Sold (COGS) incl. D&A',
                                   'COGS excluding D&A', 'Depreciation & Amortization Expense', 'Depreciation',
@@ -428,7 +427,7 @@ def update_price(ticker):
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
 
-        price_df_url = download_and_prepare_price_history(ticker, frequency, currency)
+        price_df_url = download_and_prepare_price_history(ticker, frequency)
         if price_df_url is not None:
             if check_if_tables_exists(ticker_price_history, sql_table_list):
                 sql_select_all = 'SELECT * FROM [{0}]'.format(ticker_price_history)
@@ -452,7 +451,7 @@ def update_price(ticker):
                         cursor.execute(sql_insert)
                         cursor.commit()
             else:
-                price_df = download_and_prepare_price_history(ticker, frequency, currency)
+                price_df = download_and_prepare_price_history(ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)
 
     wsj_conn.close()

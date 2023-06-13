@@ -125,34 +125,35 @@ def calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, 
 
     #jednorazowe
     # dane dla indeksu
-    if len(all_years) >= 5:
-        cursor, wsj_conn, engine = u.create_sql_connection('wsja')
-        df_ticker_price_history = ticker + '_price_history_1d'
-        sql_select_all = 'SELECT * FROM [{}]'.format(df_ticker_price_history)
-        df_ticker_price_history = pd.read_sql(sql_select_all, con=wsj_conn)
-        df_ticker_price_5y = u.price_history_5y(df_ticker_price_history)
-        rows_number = len(df_ticker_price_5y.index)
-        if rows_number == 1826:
-            indekses = [('SP_500', '^GSPC'), ('NASDAQ', '^IXIC')]
-            indicator_name_list = []
-            res_list = []
-            for indeks_name, indeks_ticker in indekses:
-                indeks_sql_price_name = indeks_name + '_price_history_1d'
-                sql_select_all = 'SELECT * FROM [{}]'.format(indeks_sql_price_name)
-                df_indeks_price_history = pd.read_sql(sql_select_all, con=wsj_conn)
-                df_indeks_price_5y = u.price_history_5y(df_indeks_price_history)
+    #if len(all_years) >= 5:
+    #    cursor, wsj_conn, engine = u.create_sql_connection('wsja')
+    #    df_ticker_price_history = ticker + '_price_history_1d'
+    #    sql_select_all = 'SELECT * FROM [{}]'.format(df_ticker_price_history)
+    #    df_ticker_price_history = pd.read_sql(sql_select_all, con=wsj_conn)
+    #    df_ticker_price_5y = u.price_history_5y(df_ticker_price_history)
+    #    rows_number = len(df_ticker_price_5y.index)
+    #    if rows_number == 1826:
+    #        indekses = [('SP_500', '^GSPC'), ('NASDAQ', '^IXIC')]
+    #        indicator_name_list = []
+    #        res_list = []
+    #        for indeks_name, indeks_ticker in indekses:
+    #            indeks_sql_price_name = indeks_name + '_price_history_1d'
+    #            sql_select_all = 'SELECT * FROM [{}]'.format(indeks_sql_price_name)
+    #            df_indeks_price_history = pd.read_sql(sql_select_all, con=wsj_conn)
+    #            df_indeks_price_5y = u.price_history_5y(df_indeks_price_history)
+#
+    #            beta = ind.beta(df_indeks_price_5y, df_ticker_price_5y)
+    #            indicator_name_list.append('Beta {0}'.format(indeks_name))
+    #            res_list.append(beta)
+    #        wsj_conn.close()
+    #        # inserting results to df2
+    #        dic_ind2 = {'Indicators': indicator_name_list, 'Current': res_list}
+    #        df2 = pd.DataFrame(dic_ind2)
+    #        df2['Ticker'] = ticker
+    #    else:
+    #        df2 = pd.DataFrame()
+    #else:
+    #    df2 = pd.DataFrame()
 
-                beta = ind.beta(df_indeks_price_5y, df_ticker_price_5y)
-                indicator_name_list.append('Beta {0}'.format(indeks_name))
-                res_list.append(beta)
-            wsj_conn.close()
-            # inserting results to df2
-            dic_ind2 = {'Indicators': indicator_name_list, 'Current': res_list}
-            df2 = pd.DataFrame(dic_ind2)
-            df2['Ticker'] = ticker
-        else:
-            df2 = pd.DataFrame()
-    else:
-        df2 = pd.DataFrame()
-
-    return df_y, df_q, df2
+    #return df_y, df_q, df2
+    return df_y, df_q

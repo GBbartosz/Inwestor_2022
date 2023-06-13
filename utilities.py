@@ -492,8 +492,9 @@ def create_basic_ticker_table_name(ticker):
 def create_advanced_ticker_table_name(ticker):
     ticker_profile = ticker + '_profile'
     ticker_price_history_1d = ticker + '_price_history_1d'
-    ticker_price_history_1mo = ticker + '_price_history_1mo'
-    ticker_advanced_tables = [ticker_profile, ticker_price_history_1d, ticker_price_history_1mo]
+    # ticker_price_history_1mo = ticker + '_price_history_1mo'
+    # ticker_advanced_tables = [ticker_profile, ticker_price_history_1d, ticker_price_history_1mo]
+    ticker_advanced_tables = [ticker_profile, ticker_price_history_1d]
     return ticker_advanced_tables
 
 
@@ -502,7 +503,7 @@ def all_tables_available(ticker):
     cursor, wsj_conn, engine = create_sql_connection('wsj')
     sql_table_list = get_all_tables(cursor)
     wsj_conn.close()
-    if all(t in sql_table_list for t in necessary_tables) == True:
+    if all(t in sql_table_list for t in necessary_tables):
         return True
     else:
         return False

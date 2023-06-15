@@ -168,7 +168,7 @@ def squeezing(myseries):
         x = list(myseries.squeeze())
     return x
 
-
+# fsc __repair_column_name
 def repair_column_name(table_name, old_col_name, cursor):
     sql_query = '''
                 ALTER TABLE [wsj].[dbo].[{}]

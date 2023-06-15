@@ -3,30 +3,6 @@ import pandas as pd
 import utilities as u
 
 
-def quarters_generator():
-    # 2021-1 data poczatkowa
-    y = 2021
-    q = 1
-    q_dates_l = []
-    while y <= datetime.datetime.today().year:
-        q_date = str(y) + '-' + str(q)
-        q_dates_l.append(q_date)
-        q += 1
-        if q == 5:
-            y += 1
-            q = 1
-    return q_dates_l
-
-
-def years_generator():
-    y = 2017
-    years_l = []
-    current_year = datetime.datetime.today().year
-    while y <= current_year:
-        years_l.append(str(y))
-        y += 1
-    return years_l
-
 
 def get_all_indicators(wsja_cursor):
     sql_query = f'SELECT Indicators FROM wsja.dbo.analysis_META_year'
@@ -102,9 +78,9 @@ class IndicatorAll:
                 self.filtered_sectors.add(tic_sector)
         self.period = period
         if self.period == 'year':
-            self.dates = years_generator()
+            self.dates = u.years_generator()
         else:
-            self.dates = quarters_generator()
+            self.dates = u.quarters_generator()
 
         self.dict = None
         self.get_dictionary()

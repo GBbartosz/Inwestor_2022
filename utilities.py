@@ -24,18 +24,34 @@ def common_member(a, b):
     common = get_rid_of_index_and_indicators(common)
     return common
 
-
+# utilities transform_val2 - syzbsza, czy nie bedzie wywalala na innych notatnikach poza financialstatementsclass
 def transform_val(val):
     if val == '-':
         val = 0
-    if val is None:
+    elif val is None:
         val = 0
-    if val != 0:
+    elif val != 0:
         if ',' in val:
             val = val.replace(',', '.')
         if '(' in val:
             val = val.replace('(', '-')
             val = val.replace(')', '')
+        if '.' in val and val.count('.') > 1:
+            val = val.replace('.', '')
+        if '%' in val:
+            val = val.replace('%', '')
+            val = float(val) / 100
+        val = float(val)
+    return val
+
+
+def transform_val2(val):
+    if val == '-' or val is None:
+        val = 0
+    else:
+        val = val.replace(',', '.')
+        val = val.replace('(', '-')
+        val = val.replace(')', '')
         if '.' in val and val.count('.') > 1:
             val = val.replace('.', '')
         if '%' in val:
@@ -423,7 +439,7 @@ class Price_year_quarter():
     def val(self, period):
         return getattr(self, period)
 
-
+# fsc __detect_errors
 def detect_errors(table, columns):
     global cursor
 
@@ -508,7 +524,7 @@ def all_tables_available(ticker):
     else:
         return False
 
-
+# fsc pod nazwa __select_all_to_df
 def get_this_table_df(tabl, conn):
     sql_select_all = 'SELECT * FROM {}'.format(tabl)
     df = pd.read_sql(sql_select_all, con=conn)
@@ -741,3 +757,28 @@ def colors():
             'yellow', 'yellowgreen', 'palegoldenrod',]
     # 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige', 'bisque', 'blanchedalmond'
     return colors
+
+
+def quarters_generator():
+    # 2021-1 data poczatkowa
+    y = 2021
+    q = 1
+    q_dates_l = []
+    while y <= dt.datetime.today().year:
+        q_date = str(y) + '-' + str(q)
+        q_dates_l.append(q_date)
+        q += 1
+        if q == 5:
+            y += 1
+            q = 1
+    return q_dates_l
+
+
+def years_generator():
+    y = 2017
+    years_l = []
+    current_year = dt.datetime.today().year
+    while y <= current_year:
+        years_l.append(str(y))
+        y += 1
+    return years_l

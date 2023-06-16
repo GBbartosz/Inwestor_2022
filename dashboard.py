@@ -318,7 +318,7 @@ def all_options_for_dropdowns(tickers_list):
 def dashboard():
 
     def main_page():
-        global tickers_l, dd_chosen_ticker, dd_chosen_indicator
+        global tickers_list, dd_chosen_ticker, dd_chosen_indicator
         tickers_dropdown_l, indicators_dd_l = all_options_for_dropdowns(tickers_list)
         b_chosen_period = ButtonChosenPeriod()
 
@@ -703,11 +703,36 @@ def dashboard():
     app.run_server(debug=True)
 
 
+def tickers_l_from_sql_tables(database):
+    cursor, conn, engine = u.create_sql_connection(database)
+    sql_table_list = u.get_all_tables(cursor, database)
+    tickers_l_sql = set()
+    for tabl in sql_table_list:
+        tabl_split = tabl.split('_')
+        if 'analysis' in tabl_split:
+            tic = tabl_split[1]
+        else:
+            tic = tabl_split[0]
+        #ticpos = tabl.find('_')
+        #tic = tabl[:ticpos]
+        tickers_l_sql.add(tic)
+    tickers_l_sql = list(tickers_l_sql)
+    cursor.close()
+    return tickers_l_sql
+
+
 start_time = time.time()
 u.pandas_df_display_options()
 warnings.filterwarnings('ignore')
 
-tickers_list = ['GOOGL', 'META', 'NFLX']  # dodac jako argument
+#tickers_list = ['GOOGL', 'META', 'NFLX']
+tickers_l_sql_wsj = tickers_l_from_sql_tables('wsj')
+tickers_l_sql_wsja = tickers_l_from_sql_tables('wsja')
+tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\tickers_list.csv')
+tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
+
+tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja]
+
 fin_st_tickers_dropdown_l = []
 
 dd_chosen_ticker = DDChosen('ticker')

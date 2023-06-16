@@ -5,7 +5,7 @@ import utilities as u
 
 
 def get_all_indicators(wsja_cursor):
-    sql_query = f'SELECT Indicators FROM wsja.dbo.analysis_META_year'
+    sql_query = f'SELECT Indicators FROM [wsja].[dbo].[analysis_META_year]'
     wsja_cursor.execute(sql_query)
     res = [x[0] for x in wsja_cursor.fetchall()]
     return res
@@ -21,7 +21,7 @@ def all_sectors_industries(tickers_list, wsj_cursor):
     sectors = []
     industries = []
     for tic in tickers_list:
-        sql_query = f'SELECT * FROM wsj.dbo.{tic}_profile'
+        sql_query = f'SELECT * FROM [wsj].[dbo].[{tic}_profile]'
         wsj_cursor.execute(sql_query)
         profile_vals = wsj_cursor.fetchall()
         sector = profile_vals[0][0]
@@ -42,13 +42,13 @@ class TicBranches:
 class TicBranch:
     def __init__(self, tic_name, wsj_cursor):
         def get_sector_industry():
-                sql_query = f'SELECT * FROM wsj.dbo.{self.tic_name}_profile'
-                wsj_cursor.execute(sql_query)
-                profile_vals = wsj_cursor.fetchall()
-                sector = profile_vals[0][0]
-                industry = profile_vals[0][1]
-                setattr(self, 'sector', sector)
-                setattr(self, 'industry', industry)
+            sql_query = f'SELECT * FROM [wsj].[dbo].[{self.tic_name}_profile]'
+            wsj_cursor.execute(sql_query)
+            profile_vals = wsj_cursor.fetchall()
+            sector = profile_vals[0][0]
+            industry = profile_vals[0][1]
+            setattr(self, 'sector', sector)
+            setattr(self, 'industry', industry)
         self.tic_name = tic_name
         self.sector = None
         self.industry = None
@@ -95,7 +95,7 @@ class IndicatorAll:
 
         self.dict = dict.fromkeys(['tickers', 'sector', 'industry'] + self.dates + ['Current'], [])
         for tic_name in self.filtered_tickers_l:
-            sql_query = f'SELECT * FROM wsja.dbo.analysis_{tic_name}_{self.period} where indicators = \'{self.indicator}\''
+            sql_query = f'SELECT * FROM [wsja].[dbo].[analysis_{tic_name}_{self.period}] where indicators = \'{self.indicator}\''
             self.wsja_cursor.execute(sql_query)
 
             vals = list(self.wsja_cursor.fetchall()[0][2:])

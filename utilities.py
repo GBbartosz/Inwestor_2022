@@ -477,11 +477,10 @@ def get_day(dstr):
     return dnum
 
 
-def create_sql_connection(mydatabase):
+def create_sql_connection(database):
     server = 'KOMPUTER\SQLEXPRESS'
-    database = mydatabase
     driver = 'SQL Server'
-    wsj_conn = pyodbc.connect('Driver={SQL Server}; Server=KOMPUTER\SQLEXPRESS; Database=wsj; Trusted_Connection=yes')
+    wsj_conn = pyodbc.connect(f'Driver={{SQL Server}}; Server=KOMPUTER\SQLEXPRESS; Database={database}; Trusted_Connection=yes')
     wsj_conn.autocommit = True
     database_con = f'mssql://@{server}/{database}?driver={driver}'
     engine = sqlalchemy.create_engine(database_con)
@@ -595,11 +594,13 @@ def classes_from_sql(ticker):
     return isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters
 
 
-def get_all_tables(cursor):
+def get_all_tables(cursor, database):
     wsj_select_table = "SELECT DISTINCT TABLE_NAME FROM information_schema.TABLES"
+    wsj_select_table = "SELECT [name] AS TableName FROM sys.tables"
     cursor.execute(wsj_select_table)
     sql_table_list = []
-    for tabl in cursor.fetchall():
+    res = cursor.fetchall()
+    for tabl in res:
         sql_table_list.append(tabl[0])
     return sql_table_list
 

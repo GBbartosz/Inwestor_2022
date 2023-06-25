@@ -16,15 +16,6 @@ import utilities as u
 import warnings
 
 
-def create_or_replace_indicators_sql_table(ticker, dfs):
-    cursor, wsj_conn, engine = u.create_sql_connection('wsja')
-    analysed_tables = ['year', 'quarter', 'global']
-    analysed_tables = [f'analysis_{ticker}_{p}' for p in analysed_tables]
-    for analysed_table, df in zip(analysed_tables, dfs):
-        if df.empty is False:
-            df.to_sql(analysed_table, con=engine, if_exists='replace', index=False)
-
-
 #def create_excel_file(total_df_y, total_df_q, total_df2, file_name):
 def create_excel_file(total_df_y, total_df_q, file_name):
     excel_path = r'C:\Users\barto\Desktop\Inwestor_2023\{}.xlsx'.format(file_name)
@@ -62,11 +53,11 @@ def analyse_one(ticker, only_one):
         print(ticker + ' - nie został sprawdzony. Brak tabel.')
         df_y, df_q, df2 = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     else:
-        isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters = u.classes_from_sql(ticker)
+        # isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters = u.classes_from_sql(ticker) odznaczone po tworzeniu nowego analyse
         #df_y, df_q, df2 = analyse.calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters, False)
-        df_y, df_q = analyse.calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters, False)
+        analyse.analyse(ticker)  # tworzy tablice wskaznikow
         #create_or_replace_indicators_sql_table(ticker, [df_y, df_q, df2])
-        create_or_replace_indicators_sql_table(ticker, [df_y, df_q])
+        #create_or_replace_indicators_sql_table(ticker, [df_y, df_q])
 
     # czy analiza tylko 1 spolki
     if only_one is True:
@@ -180,7 +171,10 @@ def find_and_delete_invalid_column_names_in_all_tables():
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     sql_table_list = u.get_all_tables(cursor)
     invalid_tickers = set()
+    n = 0
     for tabl in sql_table_list:
+        n += 1
+        print(n)
         invalid_cols = investigate_table(cursor, tabl)
         if invalid_cols:
             tic_name = get_ticker_name_from_table_name(tabl)
@@ -197,7 +191,7 @@ if __name__ == '__main__':
     valid_tickers_df = tickers_df[tickers_df['valid'] == 1]
     tickers_list = valid_tickers_df['ticker'].tolist()
     print(tickers_list)
-    find_and_delete_invalid_column_names_in_all_tables()
+    #find_and_delete_invalid_column_names_in_all_tables() # !!! przywrocic zabiera zbyt duzo czasu przy testach
 
     root = Tk()
     root.title = 'Panel inwestora'

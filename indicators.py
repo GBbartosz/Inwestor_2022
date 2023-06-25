@@ -510,6 +510,23 @@ def current_ratio(y, bay, bly, baq, blq):
     current_ratio = total_current_assets_y / total_current_liabilities_y
     return current_ratio
 
+# tst
+#@is_null
+#def p_s_ratio(y, isy, isq, price):
+#    # przydatny w wycenie akcji wzrostowych, które nie przyniosły jeszcze zysku lub doświadczyły tymczasowego niepowodzenia
+#    # przychód jest tylko wtedy wartościowy gdy w pewnym momencie można go przełożyć na zyski
+#    # różne branże mają różne marże więc wysokość przychodów moze być myląca
+#    # nie uwzględnia zysku a więc problemu spłaty długu
+#    if period_type == 'year':
+#        sales_revenue = isy.Sales_Revenue.val(y)
+#        diluted_shares_outstanding = isy.Diluted_Shares_Outstanding.val(y)
+#    elif period_type == 'quarter':
+#        sales_revenue = sum_quarters(y, isq.Sales_Revenue)
+#        diluted_shares_outstanding = isq.Diluted_Shares_Outstanding.val(y[0])
+#
+#    p_s = price / (sales_revenue / diluted_shares_outstanding)
+#    return p_s
+
 
 @is_null
 def p_s_ratio(y, isy, isq, price):
@@ -526,7 +543,6 @@ def p_s_ratio(y, isy, isq, price):
 
     p_s = price / (sales_revenue / diluted_shares_outstanding)
     return p_s
-
 
 @is_null
 def p_e_ratio(y, isy, isq, price):

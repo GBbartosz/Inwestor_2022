@@ -1,16 +1,18 @@
 import pandas as pd
-
 import update
 import utilities as u
 
 
-
-
-
-#class FinancialStatements:
-#    def __init__(self):
-#        self.isy = IncomeStatementY()
-#        self.isq == IncomeStatementQ()
+class FinancialStatements:
+    def __init__(self, ticker):
+        self.isy = OneFinancialStatement('income_statement', ticker, 'y')
+        self.isq = OneFinancialStatement('income_statement', ticker, 'q')
+        self.bay = OneFinancialStatement('balance_assets', ticker, 'y')
+        self.baq = OneFinancialStatement('balance_assets', ticker, 'q')
+        self.bly = OneFinancialStatement('balance_liabilities', ticker, 'y')
+        self.blq = OneFinancialStatement('balance_liabilities', ticker, 'q')
+        self.cfy = OneFinancialStatement('cash_flow', ticker, 'y')
+        self.cfq = OneFinancialStatement('cash_flow', ticker, 'q')
 
 
 class OneFinancialStatement:
@@ -21,18 +23,20 @@ class OneFinancialStatement:
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = u.create_sql_connection('wsj')
         self.table_name = ticker + '_' + fin_st_type + '_' + period_type
 
-        # lista wszystkich okresow
+        # list of all periods
         if self.period_type == 'y':
-            all_periods = u.years_generator()
+            self.all_periods = u.years_generator()
         elif self.period_type == 'q':
-            all_periods = u.quarters_generator()
+            self.all_periods = u.quarters_generator()
         else:
-            print('ivalid period in OneFinancialStatement class')
+            print('invalid period in OneFinancialStatement class')
 
-        # przygotowanie df z okresami kwartalnymi lub rocznymi
+        # preparing df with quarter or year periods
         self.df = None
-        self.__get_and_prepare_df(all_periods)
+        self.all_periods_real = None
+        self.__get_and_prepare_df()
         self.__detect_errors()
+        self.indicators = self.df.iloc[:, 1].to_list()
 
         if self.fin_st_type == 'income_statement':
             self.Sales_Revenue = None
@@ -232,34 +236,34 @@ class OneFinancialStatement:
             self.Net_Operating_Cash_Flow_Growth = None
             self.Net_Operating_Cash_Flow_Sales = None
 
-        ind_name_list = self.df.loc[:, 2].tolist()
-        for ind_name in ind_name_list:
+        ind_name_list = self.indicators
+        for ind_name, index_num in zip(ind_name_list, self.df.index):
             ind_name = u.get_rid_of_special_characters(ind_name)
-            setattr(self, str(ind_name), self.Indicator(i, years_list, df))
+            setattr(self, str(ind_name), Indicator(index_num, self.all_periods, self.df))
+        print(self.df)
 
-    # od tego zaczac - czy konieczny loop?
-    class Indicator(object):
-        def __init__(self, i, years_list, df):
-            for y in years_list:
-                val = df[y][i]
-                setattr(self, y, val)
-
-        def __float__(self, year):
-            return getattr(self, year)
-
-        def val(self, year):
-            return getattr(self, year)
-
-    def __get_and_prepare_df(self, all_periods):
-        self.df = self.__select_all_to_df()
-        self.df.columns = u.get_transform_dates_to_quarters(self.df.columns)
-        self.columns = list(self.df.columns[:2])
-        for period in all_periods:
+    def __add_empty_columns_to_df_to_equalize_periods_in_all_dataframes_and_update_all_periods_real(self):
+        self.columns = list(self.df.columns[:2]) # kolumny index i wskazniki
+        all_periods_real = []
+        i = 0
+        for period in self.all_periods:
             if period not in self.df.columns:
                 self.df[period] = None
+                all_periods_real.append(None)
+            else:
+                all_periods_real.append(self.all_periods_real[i])
+                i += 1
             self.columns.append(period)
         self.df = self.df[self.columns]
-        self.df = self.df.applymap(u.transform_val2)  # zamiana nieliczbowych znakow z liczb
+        self.all_periods_real = all_periods_real
+
+    def __get_and_prepare_df(self):
+        self.df = self.__select_all_to_df()
+        self.all_periods_real = [u.convert_date_with_month_name_to_number(c) for c in self.df.columns]  # conversion month names to numbers
+        self.df.columns = u.get_transform_dates_to_quarters(self.df.columns)
+        self.__add_empty_columns_to_df_to_equalize_periods_in_all_dataframes_and_update_all_periods_real()
+        indicators_column = self.df.columns[1]  # aby wykluczyc kolumne ze stringami - powodowala blad w kolejnym wierszu
+        self.df.loc[:, self.df.columns != indicators_column] = self.df.loc[:, self.df.columns != indicators_column].applymap(u.transform_val) # zamiana nieliczbowych znakow z liczb
 
     def __select_all_to_df(self):
         sql_select_all = 'SELECT * FROM [wsj].[dbo].[{}]'.format(self.table_name)
@@ -284,12 +288,68 @@ class OneFinancialStatement:
                 self.__get_and_prepare_df()
 
 
-u.pandas_df_display_options()
-fin_st_type = 'income_statement'
-ticker = 'META'
-period_type = 'y'
-ofs = OneFinancialStatement(fin_st_type, ticker, period_type)
+class Indicator(object):
+    def __init__(self, i, years_list, df):
+        for y in years_list:
+            val = df[y][i]
+            val = u.transform_val(val)
+            setattr(self, y, val)
 
+    def __float__(self, period):
+        return getattr(self, period)
+
+    def __get_previous_quarter(self, period):
+        year = int(period[:4])
+        quarter = int(period[-1])
+        if quarter == 1:
+            year -= 1
+            quarter = 4
+        else:
+            quarter -= 1
+        period = str(year) + '-' + str(quarter)
+        return period
+
+    def val(self, period):
+        return getattr(self, period)
+
+    def quarter_year_val(self, period):
+        # returns sum of last four quarters
+        i = 0
+        year_sum = 0
+        while i < 4:
+            print(period)
+            year_sum += getattr(self, period)  # add value from period
+            period = self.__get_previous_quarter(period)  # get previous period
+            i += 1
+        return year_sum
+
+import time
+import warnings
+def calculate_time(function, loops):
+    start_time = time.time()
+    n = 0
+    while n < loops:
+        function()
+        n += 1
+    end_time = time.time()
+    print(end_time - start_time)
+
+
+def func():
+    u.pandas_df_display_options()
+    warnings.filterwarnings('ignore')
+    fin_st_type = 'income_statement'
+    ticker = 'META'
+    period_type = 'q'
+    ofs = OneFinancialStatement(fin_st_type, ticker, period_type)
+    x = ofs.Sales_Revenue.val('2022-2')
+    x = ofs.Sales_Revenue.quarter_year_val('2022-2')
+    print(x)
+
+
+calculate_time(func, 1)
+
+#4.21647047996521
 
 
        # -

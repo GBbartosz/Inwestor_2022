@@ -67,8 +67,8 @@ class Ticker:
     def set_df_quarter(self):
         sql_query = f'SELECT * FROM {self.tables.quarter}'
         df = pd.read_sql(sql_query, self.wsja_conn)
-        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = static_cols + new_cols
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
         self.df_q = df
         self.dates_q = df.columns[2:]
 
@@ -80,8 +80,8 @@ class Ticker:
     def set_is_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = static_cols + new_cols
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
         self.is_df_q = df
 
     def set_ba_df_y(self):
@@ -92,8 +92,8 @@ class Ticker:
     def set_ba_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_assets_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = static_cols + new_cols
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
         self.ba_df_q = df
 
     def set_bl_df_y(self):
@@ -104,8 +104,8 @@ class Ticker:
     def set_bl_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_balance_liabilities_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = static_cols + new_cols
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
         self.bl_df_q = df
 
     def set_cf_df_y(self):
@@ -116,8 +116,8 @@ class Ticker:
     def set_cf_df_q(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_cash_flow_q'
         df = pd.read_sql(sql_query, self.wsj_conn)
-        static_cols, new_cols = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = static_cols + new_cols
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
         self.cf_df_q = df
 
 

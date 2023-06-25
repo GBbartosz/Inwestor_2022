@@ -124,9 +124,6 @@ class CurrentChooiceForFinStatement:
         return df
 
 
-
-
-
 def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
     res = None
     if fin_st == 'income_statement':
@@ -186,9 +183,8 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
                                                     line=dict(color=color),
                                                     marker=dict(symbol=marker,
                                                                 size=10)))
-            main_chart_fig.update_xaxes(type='category')
+            #main_chart_fig.update_xaxes(type='category')
 
-        n = 0
         for t in ddchosen_obj_tic.elements:
             tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
             set_period_type = b_chosen_period.condition_return_val(tic.set_df_year, tic.set_df_quarter)
@@ -283,6 +279,8 @@ def create_indcomp_fig(tickers_list, chosen_indicator, split_type, industry, sec
 
 
 def options_for_dropdown(mylist):
+    mylist = list(mylist)
+    mylist.sort()
     newlist = []
     for i in mylist:
         tmp = {'label': i, 'value': i}
@@ -705,7 +703,7 @@ def dashboard():
 
 def tickers_l_from_sql_tables(database):
     cursor, conn, engine = u.create_sql_connection(database)
-    sql_table_list = u.get_all_tables(cursor, database)
+    sql_table_list = u.get_all_tables(cursor)
     tickers_l_sql = set()
     for tabl in sql_table_list:
         tabl_split = tabl.split('_')

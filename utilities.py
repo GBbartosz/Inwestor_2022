@@ -30,7 +30,7 @@ def transform_val(val):
         val = 0
     elif val is None:
         val = 0
-    elif val != 0:
+    elif val != 0 and isinstance(val, str):
         if ',' in val:
             val = val.replace(',', '.')
         if '(' in val:
@@ -45,38 +45,40 @@ def transform_val(val):
     return val
 
 
-def transform_val2(val):
-    if val == '-' or val is None:
-        val = 0
-    else:
-        val = val.replace(',', '.')
-        val = val.replace('(', '-')
-        val = val.replace(')', '')
-        if '.' in val and val.count('.') > 1:
-            val = val.replace('.', '')
-        if '%' in val:
-            val = val.replace('%', '')
-            val = float(val) / 100
-        val = float(val)
-    return val
+#def transform_val2(val):
+#    print(val)
+#    if val == '-' or val is None:
+#        val = 0
+#    else:
+#        val = val.replace(',', '.')
+#        val = val.replace('(', '-')
+#        val = val.replace(')', '')
+#        if '.' in val and val.count('.') > 1:
+#            val = val.replace('.', '')
+#        if '%' in val:
+#            val = val.replace('%', '')
+#            val = float(val) / 100
+#        val = float(val)
+#    return val
 
 
 def get_rid_of_special_characters(word):
-    special_characters = ['&', '/', '(', ')', ' ', '-', '.', ',', '\'']
-    for char in special_characters:
-        if char in word:
-            word = word.replace(char, '_')
-    special_characters2 = ['_____', '____', '___', '__']
-    for char in special_characters2:
-        if char in word:
-            word = word.replace(char, '_')
-    if word[-1] == '_':
-        word = word[:-1]
-    if word[0] == '_':
-        word = word[1:]
+    if isinstance(word, str):
+        special_characters = ['&', '/', '(', ')', ' ', '-', '.', ',', '\'']
+        for char in special_characters:
+            if char in word:
+                word = word.replace(char, '_')
+        special_characters2 = ['_____', '____', '___', '__']
+        for char in special_characters2:
+            if char in word:
+                word = word.replace(char, '_')
+        if word[-1] == '_':
+            word = word[:-1]
+        if word[0] == '_':
+            word = word[1:]
     return word
 
-
+#priceclass
 def current_price_download(ticker):
     MW_overview = 'https://www.marketwatch.com/investing/stock/{0}'.format(ticker)
     try:
@@ -322,7 +324,7 @@ class Indicator(object):
     def val(self, year):
         return getattr(self, year)
 
-
+#priceclass
 class Price():
     # def __init__(self, tic, years_list, fiscal_year_end, price_df_m, price_df_d):
     def __init__(self, tic, periods_list, fiscal_year_end, price_df, frequency):
@@ -376,7 +378,7 @@ def get_month_name_quarter_dict():
                   }
     return month_dict
 
-
+#priceclass
 class Price_year_quarter():
     #sciagnely sie zbyt krotkie tabele - powod bledu
     # trzeba usunac wiersze z NaN - nie przeszkadzaja ale nie potrzebne w miesiacach
@@ -455,28 +457,6 @@ def detect_errors(table, columns):
     return error_detected
 
 
-def get_year(ystr):
-    pos = ystr.find('-') + 1
-    ystr = ystr[pos:]
-    pos = ystr.find('-') + 1
-    ynum = ystr[pos:]
-    return ynum
-
-
-def get_month_name(mstr):
-    pos = mstr.find('-')
-    mstart = pos + 1
-    mend = pos + 4
-    mname = mstr[mstart:mend]
-    return mname
-
-
-def get_day(dstr):
-    pos = dstr.find('-')
-    dnum = dstr[:pos]
-    return dnum
-
-
 def create_sql_connection(database):
     server = 'KOMPUTER\SQLEXPRESS'
     driver = 'SQL Server'
@@ -522,6 +502,7 @@ def all_tables_available(ticker):
         return True
     else:
         return False
+
 
 # fsc pod nazwa __select_all_to_df
 def get_this_table_df(tabl, conn):
@@ -594,8 +575,8 @@ def classes_from_sql(ticker):
     return isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters
 
 
-def get_all_tables(cursor, database):
-    wsj_select_table = "SELECT DISTINCT TABLE_NAME FROM information_schema.TABLES"
+def get_all_tables(cursor):
+    #wsj_select_table = "SELECT DISTINCT TABLE_NAME FROM information_schema.TABLES"
     wsj_select_table = "SELECT [name] AS TableName FROM sys.tables"
     cursor.execute(wsj_select_table)
     sql_table_list = []
@@ -613,7 +594,7 @@ def price_history_5y(df):
     df.reset_index(drop=True, inplace=True)
     return df
 
-
+#priceclass
 def find_index_of_date(mydate, df):
     mydate = str(mydate.date())
     while mydate not in df['Date'].values:
@@ -676,6 +657,54 @@ def get_total_number_and_range_of_all_tickers(tickers_list):
     return total_number, total_number_range
 
 
+def transform_dataframe_columns_with_month_names_to_numbers(dfcolumns):
+    df_non_date_cols = [col for col in dfcolumns if '20' not in col]
+    print(df_non_date_cols)
+    df_date_cols = [col for col in dfcolumns if '20' in col]
+    print(df_date_cols)
+    df_date_cols = transform_dates_list_with_month_names_to_numbers(df_date_cols)
+    dfcolumns = df_non_date_cols[:2] + df_date_cols + [df_non_date_cols[-1]]
+    print(dfcolumns)
+    return dfcolumns
+
+
+def transform_dates_list_with_month_names_to_numbers(mylist):
+    updated_list = [transform_date_with_month_names_to_numbers(i) for i in mylist]
+    return updated_list
+
+
+def transform_date_with_month_names_to_numbers(mydate):
+    year = get_year(mydate)
+    month_name = get_month_name(mydate)
+    day = get_day(mydate)
+    monthnamenumdict = month_name_num_dict()
+    month_num = monthnamenumdict[month_name]
+    updated_date = year + '-' + month_num + '-' + day
+    return updated_date
+
+
+def get_year(ystr):
+    pos = ystr.find('-') + 1
+    ystr = ystr[pos:]
+    pos = ystr.find('-') + 1
+    ynum = ystr[pos:]
+    return ynum
+
+
+def get_month_name(mstr):
+    pos = mstr.find('-')
+    mstart = pos + 1
+    mend = pos + 4
+    mname = mstr[mstart:mend]
+    return mname
+
+
+def get_day(dstr):
+    pos = dstr.find('-')
+    dnum = dstr[:pos]
+    return dnum
+
+
 def get_transform_dates_to_quarters(headers):
 
     def get_month_year(x):
@@ -696,7 +725,17 @@ def get_transform_dates_to_quarters(headers):
     if 'Current' in static_cols:
         static_cols.remove('Current')
         new_dates_cols = new_dates_cols + ['Current']
-    return static_cols, new_dates_cols
+    new_cols = static_cols + new_dates_cols
+    return new_cols
+
+
+def convert_date_with_month_name_to_number(mydate):
+    month_dict = month_name_num_dict()
+    year = get_year(mydate)
+    month_num = month_dict[get_month_name(mydate)]
+    day = get_day(mydate)
+    mydate = f'{year}-{month_num}-{day}'
+    return mydate
 
 
 def get_stock_currency(ticker_name, cursor):
@@ -757,6 +796,7 @@ def colors():
             'black', 'gold', 'goldenrod',
             'yellow', 'yellowgreen', 'palegoldenrod',]
     # 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige', 'bisque', 'blanchedalmond'
+
     return colors
 
 

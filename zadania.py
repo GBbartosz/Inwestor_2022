@@ -2,7 +2,6 @@
 
 #dodac index do tablic analysis
 
-#tickery w excelu
 
 #plik dzienny z zaktualizowanymi aby nie zaczynał za kazdym razem od poczatku
 
@@ -12,5 +11,19 @@
 #błędne epsy w wyniku stock split
 
 #funkcja do sprawdzania dat w price czy nie czttery cyyfry
+
+
+# wskazniki cenowe w okresach dniowych
+# wskazniki ze sprawozdan w kwartalach/latach
+
+# flagi czy wskazniki spelniaja wymagania
+
+# model
+
+# thousands to millions
+
+# indicatorall date months
+
+#brak META_price_history_1d dla meta
 
 

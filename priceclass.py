@@ -1,26 +1,39 @@
 import datetime as dt
+from dateutil.relativedelta import relativedelta
 import pandas as pd
 import utilities as u
 
 
 class Price():
     # def __init__(self, tic, years_list, fiscal_year_end, price_df_m, price_df_d):
-    def __init__(self, tic, periods_list, fiscal_year_end, price_df, frequency):
+    def __init__(self, ticker_name, period_dates_l, period_quarters_l, price_df):
         self.max = None
         self.min = None
         self.open = None
         self.close = None
         self.current = None
         prop = ['max', 'min', 'open', 'close', 'current']
-        for p in prop:
-            if p == 'current':
-                val = self.current_price_download(tic)
-                self.current = float(val)
+        loop_n = 0
+        while loop_n < len(period_quarters_l):
+            period_quarter = period_quarters_l[loop_n]
+            period_date = period_dates_l[loop_n]
+            if period_quarter == '2021-1':
+                start_date = '2021-01-01'
+            elif loop_n == 0:
+                start_date = dt.datetime.strptime(period_date, 'yyyy-MM-dd') - relativedelta(months=2)
             else:
-                setattr(self, p, Price_year_quarter(p, periods_list, price_df, fiscal_year_end, frequency))
+                start_date = period_date[loop_n - 1]
+            end_date = period_date
+            price_period_df = price_df.loc[start_date:end_date, :]
 
-    def __float__(self, val):
-        return self.current
+            # od tad
+            for p in prop:
+                if p == 'current':
+                    val = self.current_price_download(ticker_name)
+                    self.current = float(val)
+                else:
+                    setattr(self, p, Price_year_quarter(p, periods_list, price_df, fiscal_year_end, frequency))
+
 
     def current_price_download(ticker):
         MW_overview = 'https://www.marketwatch.com/investing/stock/{0}'.format(ticker)
@@ -30,6 +43,7 @@ class Price():
             price = pd.read_html(MW_overview)[1].loc[0, 'Previous Close'][1:]
         price = float(u.get_rid_of_special_characters(price)) / 100
         return price
+
 
 class Price_year_quarter():
     #sciagnely sie zbyt krotkie tabele - powod bledu
@@ -85,9 +99,6 @@ class Price_year_quarter():
 
     def val(self, period):
         return getattr(self, period)
-
-
-
 
 
 def find_index_of_date(mydate, df):

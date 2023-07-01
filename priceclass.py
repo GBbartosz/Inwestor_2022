@@ -4,36 +4,92 @@ import pandas as pd
 import utilities as u
 
 
-class Price():
-    # def __init__(self, tic, years_list, fiscal_year_end, price_df_m, price_df_d):
-    def __init__(self, ticker_name, period_dates_l, period_quarters_l, price_df):
-        self.max = None
-        self.min = None
-        self.open = None
-        self.close = None
-        self.current = None
-        prop = ['max', 'min', 'open', 'close', 'current']
-        loop_n = 0
-        while loop_n < len(period_quarters_l):
-            period_quarter = period_quarters_l[loop_n]
-            period_date = period_dates_l[loop_n]
-            if period_quarter == '2021-1':
-                start_date = '2021-01-01'
-            elif loop_n == 0:
-                start_date = dt.datetime.strptime(period_date, 'yyyy-MM-dd') - relativedelta(months=2)
+class Price:
+    def __init__(self, ticker_name, period_dates_l, period_quarters_l):
+
+        def get_end_date(period_dates_l, loop_n, last_loop):
+            if last_loop:
+                end_date = self.max_date
             else:
-                start_date = period_date[loop_n - 1]
-            end_date = period_date
-            price_period_df = price_df.loc[start_date:end_date, :]
+                end_date = period_dates_l[loop_n + 1]
+            return end_date
 
-            # od tad
-            for p in prop:
-                if p == 'current':
-                    val = self.current_price_download(ticker_name)
-                    self.current = float(val)
-                else:
-                    setattr(self, p, Price_year_quarter(p, periods_list, price_df, fiscal_year_end, frequency))
+        self.subperiods = ['day', 'week', 'month', 'quarter']
+        self.val_types = ['High', 'Low', 'Open', 'Close']
+        self.summarizations = ['max', 'min', 'open', 'close']
+        self.ticker_name = ticker_name
+        self.wsj_cursor, self.wsj_conn, self.wsj_engine = u.create_sql_connection('wsj')
+        self.table_name = self.ticker_name + '_price_history_1d'
+        self.price_df = self.__select_all_to_df()
+        self.max_date = self.price_df['Date'].max()
 
+        last_loop = False
+        period_df_dict = {}
+        loop_n = 0
+        while loop_n < len(period_dates_l):
+            period_date = period_dates_l[loop_n]
+            start_date = period_date
+            if len(period_quarters_l) - loop_n == 1:
+                last_loop = True
+            end_date = get_end_date(period_dates_l, loop_n, last_loop)
+            price_period_df = self.price_df[(self.price_df['Date'] > start_date) & (self.price_df['Date'] <= end_date)]
+            period_df_dict[period_date] = price_period_df
+            loop_n += 1
+        self.period_df_dict = period_df_dict
+
+    def __select_all_to_df(self):
+        sql_select_all = 'SELECT * FROM [wsj].[dbo].[{}]'.format(self.table_name)
+        df = pd.read_sql(sql_select_all, con=self.wsj_conn)
+        return df
+
+    def val(self, period_date, subperiod, val_type, summarization):
+        # period_type: day, week, month, quarter
+        # val_type: High, Low, Open, Close - columns
+        # summarization: max, min, open, close
+
+        def get_val_type(df, summarization):
+            vals = df.iloc[:, 1].tolist()
+            if summarization == 'open':
+                val = vals[-1]
+            elif summarization == 'close':
+                val = vals[0]
+            elif summarization == 'max':
+                val = max(vals)
+            elif summarization == 'min':
+                val = min(vals)
+            return val
+
+        def get_week(date_str):
+            week = dt.datetime.strptime(date_str, '%Y-%m-%d').isocalendar().week
+            if week < 10:
+                week = '0' + str(week)
+            else:
+                week = str(week)
+            return week
+
+        df = self.period_df_dict[period_date][['Date', val_type]]
+
+        if subperiod == 'quarter':
+            res = {period_date: get_val_type(df, summarization)}
+        elif subperiod == 'month':
+            unique_year_months = list(set([x[:7] for x in df['Date'].tolist()]))
+            res = {}
+            for year_month in unique_year_months:
+                month_df = df[df['Date'].apply(lambda x: x[:7]) == year_month]
+                res[year_month] = get_val_type(month_df, summarization)
+        elif subperiod == 'week':
+            df['Date'] = df['Date'].apply(lambda x: x[:4] + '-' + get_week(x))
+            unique_year_weeks = list(set(df['Date'].tolist()))
+            res = {}
+            for year_week in unique_year_weeks:
+                week_df = df[df['Date'] == year_week]
+                res[year_week] = get_val_type(week_df, summarization)
+        elif subperiod == 'day':
+            res = {df.iloc[i, 0]: df.iloc[i, 1] for i in range(len(df.index))}
+        reskeys = list(res.keys())
+        reskeys.sort()
+        res = {i: res[i] for i in reskeys}
+        return res
 
     def current_price_download(ticker):
         MW_overview = 'https://www.marketwatch.com/investing/stock/{0}'.format(ticker)
@@ -45,67 +101,12 @@ class Price():
         return price
 
 
-class Price_year_quarter():
-    #sciagnely sie zbyt krotkie tabele - powod bledu
-    # trzeba usunac wiersze z NaN - nie przeszkadzaja ale nie potrzebne w miesiacach
-    def __init__(self, p, periods_list, price_df, fiscal_year_end, frequency):
-        if frequency == 'q':
-            for quarter in periods_list:
-                quarter_end = u.convert_date_with_month_name_to_number(quarter)
-                quarter_end = dt.datetime.strptime(quarter_end, '%Y-%m-%d')
-
-                quarter_start = quarter_end + pd.DateOffset(months=-2)
-                quarter_start = str(quarter_start)[:8] + '01'
-                quarter_start = dt.datetime.strptime(quarter_start, '%Y-%m-%d')
-
-                quarter_end_ind = find_index_of_date(quarter_start, price_df)
-                quarter_start_ind = find_index_of_date(quarter_end, price_df)
-
-                df = price_df.iloc[quarter_start_ind:quarter_end_ind, :]
-
-                if p == 'max':
-                    val = df['High'].max()
-                elif p == 'min':
-                    val = df['Low'].min()
-                elif p == 'open':
-                    val = df.loc[:, 'Open'].iloc[-1]
-                elif p == 'close':
-                    val = df.loc[:, 'Close'].iloc[0]
-                val = float(val)
-                setattr(self, str(quarter), val)
-
-        if frequency == 'y':
-            for year in periods_list:
-                initial_date = '{0}-{1}-{2}'.format(year, fiscal_year_end, '01')
-                # if frequency == 'm':
-                #     fiscal_y_start = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(years=-1, months=1)
-                #     fiscal_y_end = dt.datetime.strptime(initial_date, '%Y-%m-%d')
-
-                fiscal_y_start = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(years=-1, months=1)
-                fiscal_y_end = dt.datetime.strptime(initial_date, '%Y-%m-%d') + pd.DateOffset(months=1, days=-1)
-                start_fiscal_year_ind = find_index_of_date(fiscal_y_start, price_df)
-                end_fiscal_year_ind = find_index_of_date(fiscal_y_end, price_df)
-                df = price_df.iloc[end_fiscal_year_ind:start_fiscal_year_ind, :]
-                if p == 'max':
-                    val = df['High'].max()
-                elif p == 'min':
-                    val = df['Low'].min()
-                elif p == 'open':
-                    val = df.loc[:, 'Open'].iloc[-1]
-                elif p == 'close':
-                    val = df.loc[:, 'Close'].iloc[0]
-                val = float(val)
-                setattr(self, str(year), val)
-
-    def val(self, period):
-        return getattr(self, period)
-
-
-def find_index_of_date(mydate, df):
-    mydate = str(mydate.date())
-    while mydate not in df['Date'].values:
-        mydate = dt.datetime.strptime(mydate, '%Y-%m-%d')
-        mydate = mydate + pd.DateOffset(days=1)
-        mydate = str(mydate.date())
-    mydate = df.index[(df['Date'] == mydate)][0]
-    return mydate
+#ticker_name = 'dis'
+#period_dates_l = ['2022-03-31', '2022-06-30']
+#period_quarters_l = ['2022-1', '2022-2']
+#price = Price(ticker_name, period_dates_l, period_quarters_l)
+#
+#for pd, pq in zip(period_dates_l, period_quarters_l):
+#    print(pd)
+#    val = price.val(period_date=pd, subperiod='week', val_type='Close', summarization='close')
+#    print(val)

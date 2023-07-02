@@ -123,6 +123,27 @@ class CurrentChooiceForFinStatement:
                                        self.b_chosen_period.condition_return_val(tic.cf_df_y, tic.cf_df_q))
         return df
 
+# musi wpływać na wybór tablic przez klasę Ticker
+class ChoiceForPrice:
+    def __init__(self, ):
+        self.period_type = 'day'
+        self.val_type = 'Close'
+        self.summarization = 'close'
+
+        self.table_name_type = self.__get_table_name_type()
+
+    def __get_table_name_type(self):
+        return f'{self.period_type}_{self.val_type}_{self.summarization}'
+
+    def update(self, period_type=None, val_type=None, summarization=None):
+        if period_type:
+            self.period_type = period_type
+        elif val_type:
+            self.val_type = val_type
+        elif summarization:
+            self.summarization = summarization
+
+
 
 def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
     res = None
@@ -296,7 +317,10 @@ def all_options_for_dropdowns(tickers_list):
     tic.create_indicators()
     tickers_dropdown_l = options_for_dropdown(tickers_list)
     indicators_dd_l = options_for_dropdown(tic.indicators_names_l)
-    return tickers_dropdown_l, indicators_dd_l
+    price_period_type_dd_l = options_for_dropdown(['day', 'week', 'month', 'quarter'])
+    price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+    price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
+    return tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
 #def navigation_panel(current_page):
 #
@@ -317,7 +341,7 @@ def dashboard():
 
     def main_page():
         global tickers_list, dd_chosen_ticker, dd_chosen_indicator
-        tickers_dropdown_l, indicators_dd_l = all_options_for_dropdowns(tickers_list)
+        tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(tickers_list)
         b_chosen_period = ButtonChosenPeriod()
 
         layout_main_page = dash.html.Div([
@@ -348,8 +372,29 @@ def dashboard():
                                  style={'width': '80px',
                                         'height': '80px',
                                         'display': 'inline-block',
-                                        'vertical-align': 'top'})],
-                          style={'display': 'inline-block'}
+                                        'vertical-align': 'top'}),
+                dash.dcc.Dropdown(id='price_period_type_dd',
+                                  options=price_period_type_dd_l,
+                                  placeholder='Select price period type',
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.dcc.Dropdown(id='price_val_type_dd',
+                                  options=price_val_type_dd_l,
+                                  placeholder='Select price value type',
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.dcc.Dropdown(id='price_summarization_dd',
+                                  options=price_summarization_dd_l,
+                                  placeholder='Select price summarization type',
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'})],
+                style={'display': 'inline-block'}
             ),
             dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px',
                                                                        'height': '800px'}),

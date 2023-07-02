@@ -32,9 +32,6 @@ class IndicatorCalculation:
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
         res = self.pv / (sales_revenue / diluted_shares_outstanding)
         self.period_price_indicators_values_l.append(res)
-        print(sales_revenue)
-        print(diluted_shares_outstanding)
-        print(res)
 
     def update_indicators_without_price(self):
         self.df = pd.DataFrame()
@@ -46,13 +43,11 @@ class IndicatorCalculation:
 
             self.df[period_real] = self.period_indicators_values_l
         table_type_name = 'no_price'
-        print(self.df)
         return self.df, table_type_name
 
     def update_indicators_with_price(self):
         self.df = pd.DataFrame()
         for period_real in self.periods_real:
-            print(period_real)
             self.period_real = period_real
             self.price_val = self.price.val(self.period_real,
                                             self.price_subperiod,
@@ -63,10 +58,7 @@ class IndicatorCalculation:
                 self.period_price_indicators_values_l = []
                 self.pv = self.price_val[price_period]
 
-
-                if price_period == '2023-03-31':
-                    self.calc_p_s_ratio()
-
+                self.calc_p_s_ratio()
 
                 self.df[price_period] = self.period_price_indicators_values_l
 

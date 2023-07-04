@@ -4,6 +4,7 @@ import pandas as pd
 class IndicatorCalculation:
     def __init__(self, finsts, price, price_subperiod, price_val_type, price_summarization, periods_real):
         self.finsts = finsts
+        self.ticker_name = self.finsts.ticker_name
         self.price = price
         self.price_subperiod = price_subperiod
         self.price_val_type = price_val_type
@@ -15,6 +16,8 @@ class IndicatorCalculation:
         self.df = None
         self.period_indicators_values_l = None
         self.period_price_indicators_values_l = None
+        self.noprice_indicators = ['Revenue']
+        self.price_indicators = ['P/S']
 
     def __get_table_type_name(self):
         return f'{self.price_subperiod}_{self.price_val_type}_{self.price_summarization}'
@@ -35,6 +38,8 @@ class IndicatorCalculation:
 
     def update_indicators_without_price(self):
         self.df = pd.DataFrame()
+        self.df['Ticker'] = len(self.noprice_indicators) * [self.ticker_name]
+        self.df['Indicator'] = self.noprice_indicators
         for period_real in self.periods_real:
             self.period_indicators_values_l = []
             self.period_real = period_real
@@ -47,6 +52,8 @@ class IndicatorCalculation:
 
     def update_indicators_with_price(self):
         self.df = pd.DataFrame()
+        self.df['Ticker'] = len(self.price_indicators) * [self.ticker_name]
+        self.df['Indicator'] = self.price_indicators
         for period_real in self.periods_real:
             self.period_real = period_real
             self.price_val = self.price.val(self.period_real,
@@ -64,8 +71,3 @@ class IndicatorCalculation:
 
         table_type_name = self.__get_table_type_name()
         return self.df, table_type_name
-
-
-
-
-

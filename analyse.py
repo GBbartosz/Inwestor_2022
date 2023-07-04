@@ -46,7 +46,7 @@ def analyse(ticker_name):
                 dfs.append(df)
                 table_type_names.append(table_type_name)
 
-    #create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
+    create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
 warnings.filterwarnings('ignore')
 analyse('dis')

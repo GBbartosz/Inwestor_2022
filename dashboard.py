@@ -96,7 +96,7 @@ class CurrentChooiceForFinStatement:
             self.ticker_name = dd_chosen_ticker.elements[-1]
 
     def get_df(self, chosen_statement=None):
-        global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+        global wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price
 
         self.chosen_fin_statement = chosen_statement
         # single albo multi wybor w dropdown
@@ -106,7 +106,7 @@ class CurrentChooiceForFinStatement:
         if self.ticker_name is None:
             df = pd.DataFrame()
         else:
-            tic = Ticker(self.ticker_name, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            tic = Ticker(self.ticker_name, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
             if chosen_statement is None:
                 self.b_chosen_period.condition_return_val(tic.set_is_df_y, tic.set_is_df_q)()
                 df = self.b_chosen_period.condition_return_val(tic.is_df_y, tic.is_df_q)
@@ -125,7 +125,7 @@ class CurrentChooiceForFinStatement:
 
 # musi wpływać na wybór tablic przez klasę Ticker
 class ChoiceForPrice:
-    def __init__(self, ):
+    def __init__(self):
         self.period_type = 'day'
         self.val_type = 'Close'
         self.summarization = 'close'
@@ -142,7 +142,6 @@ class ChoiceForPrice:
             self.val_type = val_type
         elif summarization:
             self.summarization = summarization
-
 
 
 def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
@@ -182,22 +181,20 @@ def random_color():
     return color
 
 
-def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other, b_chosen_period):
+def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other, b_chosen_period, dd_chosen_price):
 
-    def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, b_chosen_period,
-                          wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
+    def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, b_chosen_period, dd_chosen_price,
+                          wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine):
 
         def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color):
 
-            for i in ddchosen_obj_ind.elements:
-                ddchosen_obj_ind.assign_marker_to_indicator(i)
-                marker = getattr(ddchosen_obj_ind, i + '_marker')
-                indicator_period = b_chosen_period.condition_return_val('_y', '_q')
-                indicator_name = i + indicator_period
-                x = getattr(tic, 'dates' + indicator_period).values
+            for indicator_name in ddchosen_obj_ind.elements:
+                ddchosen_obj_ind.assign_marker_to_indicator(indicator_name)
+                marker = getattr(ddchosen_obj_ind, indicator_name + '_marker')
+                x = getattr(tic, indicator_name).dates
                 x.sort()
                 y = getattr(tic, indicator_name).values
-                n = tic.name + '_' + i
+                n = tic.name + '_' + indicator_name
                 main_chart_fig.add_trace(go.Scatter(x=x,
                                                     y=y,
                                                     name=n,
@@ -207,9 +204,8 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
             #main_chart_fig.update_xaxes(type='category')
 
         for t in ddchosen_obj_tic.elements:
-            tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
-            set_period_type = b_chosen_period.condition_return_val(tic.set_df_year, tic.set_df_quarter)
-            set_period_type()
+            tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
+            tic.set_analysis_df()
             tic.create_indicators()
             ddchosen_obj_tic.assign_color_to_ticker(t)
             color = getattr(ddchosen_obj_tic, t + '_color')
@@ -229,11 +225,11 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
             ys = []
             names = []
             if ddchosen_obj_actual.name == 'ticker':
-                create_ticker_obj(main_chart_fig, ddchosen_obj_actual, dd_obj_other, b_chosen_period, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor,
-                                  wsja_conn, wsja_engine)
+                create_ticker_obj(main_chart_fig, ddchosen_obj_actual, dd_obj_other, b_chosen_period, dd_chosen_price,
+                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
             else:
-                create_ticker_obj(main_chart_fig, dd_obj_other, ddchosen_obj_actual, b_chosen_period, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor,
-                                  wsja_conn, wsja_engine)
+                create_ticker_obj(main_chart_fig, dd_obj_other, ddchosen_obj_actual, b_chosen_period, dd_chosen_price,
+                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
     return main_chart_fig
 
 
@@ -310,10 +306,10 @@ def options_for_dropdown(mylist):
 
 
 def all_options_for_dropdowns(tickers_list):
-    global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+    global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine, dd_chosen_price
 
-    tic = Ticker(tickers_list[0], wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
-    tic.set_df_year()
+    tic = Ticker(tickers_list[0], wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
+    tic.set_analysis_df()
     tic.create_indicators()
     tickers_dropdown_l = options_for_dropdown(tickers_list)
     indicators_dd_l = options_for_dropdown(tic.indicators_names_l)
@@ -340,7 +336,7 @@ def all_options_for_dropdowns(tickers_list):
 def dashboard():
 
     def main_page():
-        global tickers_list, dd_chosen_ticker, dd_chosen_indicator
+        global tickers_list, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price
         tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(tickers_list)
         b_chosen_period = ButtonChosenPeriod()
 
@@ -423,7 +419,8 @@ def dashboard():
                 title_h1_ticker = 'None ticker selected'
             else:
                 title_h1_ticker = dd_chosen_ticker.elements
-                fin_st_tickers_dropdown_l_update, indicators_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
+                #fin_st_tickers_dropdown_l_update, indicators_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
+                fin_st_tickers_dropdown_l_update, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
                 fin_st_tickers_dropdown_l = fin_st_tickers_dropdown_l_update
                 finst_link_disabled = False
             curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
@@ -435,11 +432,11 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_selection_of_indicator(chosen_indicator):
-            global dd_chosen_ticker, dd_chosen_indicator, \
-                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+            global dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price, \
+                wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             main_chart_fig = ticker_indicator_period_update(chosen_indicator, dd_chosen_indicator, dd_chosen_ticker,
-                                                            b_chosen_period)
+                                                            b_chosen_period, dd_chosen_price)
             return main_chart_fig
 
         @app.callback(
@@ -775,17 +772,20 @@ tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\t
 tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
 tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja]
+tickers_list = ['DIS'] #do usuniecia
 
 fin_st_tickers_dropdown_l = []
 
 dd_chosen_ticker = DDChosen('ticker')
 dd_chosen_indicator = DDChosen('indicator')
+dd_chosen_price = ChoiceForPrice()
 
 
 
 curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
 wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
+wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
 dashboard()
 end_time = time.time()
 print(end_time - start_time)

@@ -5,6 +5,7 @@ import utilities as u
 
 class FinancialStatements:
     def __init__(self, ticker):
+        self.ticker_name = ticker
         #self.isy = OneFinancialStatement('income_statement', ticker, 'y')
         self.isq = OneFinancialStatement('income_statement', ticker, 'q')
         #self.bay = OneFinancialStatement('balance_assets', ticker, 'y')

@@ -11,12 +11,14 @@ def dictionary_keys_to_list(mydict):
 
 
 class Ticker:
-    def __init__(self, ticker, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
+    def __init__(self, ticker, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price):
         self.name = ticker
-        self.df_y = None
-        self.df_q = None
-        self.dates_y = None
-        self.dates_q = None
+        self.price_df = None
+        self.price_dates = None
+        self.price_indicators_names_l = []
+        self.noprice_df = None
+        self.noprice_dates = None
+        self.noprice_indicators_names_l = []
         self.is_df_y = None
         self.is_df_q = None
         self.ba_df_y = None
@@ -27,50 +29,47 @@ class Ticker:
         self.cf_df_q = None
         self.indicators_names_l = None
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
-        self.wsja_cursor, self.wsja_conn, self.wsja_engine = wsja_cursor, wsja_conn, wsja_engine
+        self.wsja2_cursor, self.wsja2_conn, self.wsja2_engine = wsja2_cursor, wsja2_conn, wsja2_engine
         sector_industry = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', self.wsj_conn).iloc[0, :].tolist()
         self.sector = sector_industry[0]
         self.industry = sector_industry[1]
-        setattr(self, 'tables', TickerTables(ticker))
+        self.analysis_price_table_name = f'[wsja2].[dbo].[analysis_{self.name}_{dd_chosen_price.period_type}_{dd_chosen_price.val_type}_{dd_chosen_price.summarization}]'
+        self.analysis_noprice_table_name = f'[wsja2].[dbo].[analysis_{self.name}_no_price]'
 
     def create_indicators(self):
 
-        def create_indicators2(df, time_type):
-            indicators = df['Indicators'].tolist()
-            self.indicators_names_l = indicators
+        def create_indicators2(df):
+            indicators = df['Indicator'].tolist()
+            self.indicators_names_l = self.price_indicators_names_l + self.noprice_indicators_names_l
             for i in indicators:
-                name = str(i) + time_type
-                setattr(self, name, ChosenIndicator(df, i, name))
+                setattr(self, i, ChosenIndicator(df, i))
 
         class ChosenIndicator:
-            def __init__(self, df, i, name):
-                mdict = df[df['Indicators'] == i].iloc[0:, 2:].to_dict('records')[0]
-                #mdict.pop('Current')
-                self.name = name
+            def __init__(self, df, i):
+                mdict = df[df['Indicator'] == i].iloc[0:, 2:].to_dict('records')[0]
+                self.name = i
                 setattr(self, 'values', dictionary_values_to_list(mdict))
                 setattr(self, 'dates', dictionary_keys_to_list(mdict))
 
-        if self.df_y is not None:
-            create_indicators2(self.df_y, '_y')
-        if self.df_q is not None:
-            create_indicators2(self.df_q, '_q')
+        self.price_indicators_names_l = self.price_df['Indicator'].tolist()
+        create_indicators2(self.price_df)
+        self.noprice_indicators_names_l = self.noprice_df['Indicator'].tolist()
+        create_indicators2(self.noprice_df)
 
-    def set_df_year(self):
-        sql_query = f'SELECT * FROM {self.tables.year}'
-        #self.wsja_cursor.execute(sql_query)
-        #columns = [col[0] for col in self.wsja_cursor.description]
-        #df = pd.DataFrame.from_records(self.wsja_cursor.fetchall(), columns=columns)
-        df = pd.read_sql(sql_query, self.wsja_conn)
-        self.df_y = df
-        self.dates_y = df.columns[2:]
-
-    def set_df_quarter(self):
-        sql_query = f'SELECT * FROM {self.tables.quarter}'
-        df = pd.read_sql(sql_query, self.wsja_conn)
+    def set_analysis_df(self):
+        sql_query = f'SELECT * FROM {self.analysis_price_table_name}'
+        df = pd.read_sql(sql_query, self.wsja2_conn)
         #df.columns = u.get_transform_dates_to_quarters(df.columns)
-        df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
-        self.df_q = df
-        self.dates_q = df.columns[2:]
+        #df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
+        self.price_df = df
+        self.price_dates = df.columns[2:]
+
+        sql_query = f'SELECT * FROM {self.analysis_noprice_table_name}'
+        df = pd.read_sql(sql_query, self.wsja2_conn)
+        #df.columns = u.get_transform_dates_to_quarters(df.columns)
+        #df.columns = u.transform_dataframe_columns_with_month_names_to_numbers(df.columns)
+        self.noprice_df = df
+        self.noprice_dates = df.columns[2:]
 
     def set_is_df_y(self):
         sql_query = f'SELECT * FROM wsj.dbo.{self.name}_income_statement_y'
@@ -121,22 +120,42 @@ class Ticker:
         self.cf_df_q = df
 
 
-class TickerTables:
-    def __init__(self, ticker):
-        self.year = f'wsja.dbo.analysis_{ticker}_year'
-        self.quarter = f'wsja.dbo.analysis_{ticker}_quarter'
-        self.glob = f'wsja.dbo.analysis_{ticker}_global'
 
 
-
-
-
-
-
+# funkcja techniczna do usuniecia
+#class ChoiceForPrice:
+#    def __init__(self):
+#        self.period_type = 'day'
+#        self.val_type = 'Close'
+#        self.summarization = 'close'
+#
+#        self.table_name_type = self.__get_table_name_type()
+#
+#    def __get_table_name_type(self):
+#        return f'{self.period_type}_{self.val_type}_{self.summarization}'
+#
+#    def update(self, period_type=None, val_type=None, summarization=None):
+#        if period_type:
+#            self.period_type = period_type
+#        elif val_type:
+#            self.val_type = val_type
+#        elif summarization:
+#            self.summarization = summarization
+#
+#
 #wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-#wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
-#tic = Ticker('GOOGL', wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
-#tic.set_df_year()
-#tic.set_df_quarter()
+#wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
+#dd_chosen_price = ChoiceForPrice()
+#tic = Ticker('DIS', wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
+#tic.set_analysis_df()
 #tic.create_indicators()
+#
+#print(tic.indicators_names_l)
+#print(tic.Revenue.values)
+#print(tic.Revenue.dates)
+#print(getattr(tic, 'P/S').values)
+#print(getattr(tic, 'P/S').dates)
+
+
+
 

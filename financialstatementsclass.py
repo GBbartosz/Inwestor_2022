@@ -310,15 +310,53 @@ class Indicator(object):
     def val(self, period):
         return getattr(self, period)
 
+    def val_prev(self, period):
+        period_pos = self.periods_list.index(period)
+        if period_pos >= 1:
+            prev_period = self.__get_previous_quarter(self, period)
+            res = getattr(self, prev_period)
+        else:
+            res = None
+        return res
+
+    def val_prev_year(self, period):
+        period_pos = self.periods_list.index(period)
+        if period_pos >= 3:  # checks if 4 periods including present period are available
+            prev_year_period = self.periods_list[period_pos - 4]
+            res = getattr(self, prev_year_period)
+        else:
+            res = None
+        return res
+
     def quarter_year_val(self, period):
         # returns sum of last four quarters
-        i = 0
-        year_sum = 0
-        while i < 4:
-            year_sum += getattr(self, period)  # add value from period
-            period = self.__get_previous_quarter(period)  # get previous period
-            i += 1
+        period_pos = self.periods_list.index(period)
+        if period_pos >= 3:  # checks if 4 periods including present period are available
+            i = 0
+            year_sum = 0
+            while i < 4:
+                year_sum += getattr(self, period)  # add value from period
+                period = self.__get_previous_quarter(period)  # get previous period
+                i += 1
+        else:
+            year_sum = None
         return year_sum
+
+    def previous_year_quarter_year_val(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        period_pos = self.periods_list.index(period)
+        if period_pos >= 7:  # checks if 8 periods including present period are available
+            i = 0
+            prev_year_sum = 0
+            while i < 8:
+                if i >= 4:
+                    prev_year_sum += getattr(self, period)  # add value from period
+                    period = self.__get_previous_quarter(period)  # get previous period
+                i += 1
+        else:
+            prev_year_sum = None
+        return prev_year_sum
+
 
 import time
 import warnings

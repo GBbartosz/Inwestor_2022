@@ -16,24 +16,6 @@ import utilities as u
 import warnings
 
 
-#def create_excel_file(total_df_y, total_df_q, total_df2, file_name):
-def create_excel_file(total_df_y, total_df_q, file_name):
-    excel_path = r'C:\Users\barto\Desktop\Inwestor_2023\{}.xlsx'.format(file_name)
-    wb = xlwt.Workbook(excel_path)
-    ws1 = wb.add_sheet('Main indicators y')
-    ws2 = wb.add_sheet('Main indicators q')
-    ws3 = wb.add_sheet('Advanced indicators y')
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-        writer.book = wb
-        writer.sheets.update(dict((ws.title, ws) for ws in wb.worksheets))
-        total_df_y.to_excel(excel_writer=writer, sheet_name='Main indicators y')
-        total_df_q.to_excel(excel_writer=writer, sheet_name='Main indicators q')
-        #total_df2.to_excel(excel_writer=writer, sheet_name='Advanced indicators y')
-        writer.save()
-
-
 def find_ticker(*args):
     information.set(entry_txt.get())
     if entry_txt.get().upper() in tickers_list:
@@ -46,29 +28,13 @@ def find_ticker(*args):
         button2.config(state=DISABLED)
 
 
-def analyse_one(ticker, only_one):
+def analyse_one(ticker):
     u.pandas_df_display_options()
     ticker = ticker.upper()
     if u.all_tables_available(ticker) is False:
         print(ticker + ' - nie został sprawdzony. Brak tabel.')
-        df_y, df_q, df2 = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     else:
-        # isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters = u.classes_from_sql(ticker) odznaczone po tworzeniu nowego analyse
-        #df_y, df_q, df2 = analyse.calculate(ticker, isy, isq, bay, baq, bly, blq, cfy, cfq, price_y, price_q, all_years, all_quarters, False)
         analyse.analyse(ticker)  # tworzy tablice wskaznikow
-        #create_or_replace_indicators_sql_table(ticker, [df_y, df_q, df2])
-        #create_or_replace_indicators_sql_table(ticker, [df_y, df_q])
-
-    # czy analiza tylko 1 spolki
-    if only_one is True:
-        print(df_y)
-        print(df_q)
-        #print(df2)
-        f_name = 'analiza_{}'.format(ticker)
-        #create_excel_file(df_y, df_q, df2, f_name)
-        create_excel_file(df_y, df_q, f_name)
-    #return df_y, df_q, df2
-    return df_y, df_q
 
 
 def analyse_all(tickers_list):
@@ -79,28 +45,12 @@ def analyse_all(tickers_list):
     analyse_notebook = upnot.UpdateNotebook(analyse_notebook_name)
     remaining_tickers = upnot.update_notebook(tickers_list, analyse_notebook_name)
 
-    frame_df_y = []
-    frame_df_q = []
-    #frame_df2 = []
     total_number, total_number_range = u.get_total_number_and_range_of_all_tickers(remaining_tickers)
     for tic, num in zip(remaining_tickers, total_number_range):
         print(f'{tic} - {num} out of {total_number}')
-        #df_y, df_q, df2 = analyse_one(tic, False)
-        df_y, df_q = analyse_one(tic, False)
-        frame_df_y.append(df_y)
-        frame_df_q.append(df_q)
-        #frame_df2.append(df2)
+        analyse_one(tic)
         analyse_notebook.confirm_updated(tic)
 
-    total_df_y = pd.concat(frame_df_y, ignore_index=True, sort=False)
-    total_df_q = pd.concat(frame_df_q, ignore_index=True, sort=False)
-    #total_df2 = pd.concat(frame_df2, ignore_index=True, sort=False)
-    print(total_df_y)
-    print(total_df_q)
-    #print(total_df2)
-
-    #create_excel_file(total_df_y, total_df_q, total_df2, 'analiza_all')
-    create_excel_file(total_df_y, total_df_q, 'analiza_all')
     end_time = time.time()
     print(end_time - start_time)
 

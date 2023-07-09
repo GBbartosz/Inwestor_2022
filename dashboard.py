@@ -11,6 +11,9 @@ from indicatorall import IndicatorAll, get_all_indicators
 from tickerclass import Ticker
 import utilities as u
 import dashboardlinks as dashblinks
+import dashboardelements as dashele
+
+import dash_bootstrap_components as dbc
 
 
 class IndcompFilters:
@@ -305,6 +308,7 @@ def create_indcomp_fig():
                                          showlegend=show_legend))
 
     indcomp_fig.update_xaxes(type='category')
+    indcomp_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
 
     return indcomp_fig, indall
 
@@ -565,77 +569,48 @@ def dashboard():
                 price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
         indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = initial_options_for_dropdowns()
+        indcomp_ind_dd = dashele.dropdown_ele('indcomp_ind_dd', indicators_dd_l, 'Select indicator', False, 200, 40)
+        indcomp_split_dd = dashele.dropdown_ele('indcomp_split_dd', split_dd_l, 'Select split option', False, 200, 40)
+        indcomp_sector_dd = dashele.dropdown_ele('indcomp_sector_dd', sectors_dd_l, 'Select sector', True, 200, 200)
+        indcomp_industry_dd = dashele.dropdown_ele('indcomp_industry_dd', industries_dd_l, 'Select industry', True, 200, 200)
+        indcomp_ticker_highlight_dd = dashele.dropdown_ele('indcomp_ticker_highlight_dd', tickers_highlight_dd_l, 'Select ticker', True, 200, 200)
+        indcomp_price_period_type_dd = dashele.dropdown_ele('indcomp_price_period_type_dd', price_period_type_dd_l, dd_chosen_price.period_type, False, 200, 40)
+        indcomp_price_val_type_dd = dashele.dropdown_ele('indcomp_price_val_type_dd', price_val_type_dd_l, dd_chosen_price.val_type, False, 200, 40)
+        indcomp_price_summarization_dd = dashele.dropdown_ele('indcomp_price_summarization_dd', price_summarization_dd_l, dd_chosen_price.summarization, False, 200, 40)
+
+        indcomp_title = dash.html.H1(id='h1_indicator',
+                                     children='Indicators',
+                                     style={'position': 'absolute', 'top': '0', 'left': '0',
+                                            'margin': '0px'})
+
+        indcomp_chart = dash.dcc.Graph(id='indcomp_chart',
+                                     figure=go.Figure(),
+                                    style={'height': '800px', 'width': '1600px'})
+
+        indcomp_link_to_main = dashblinks.link_main()
+
+        layout_indicator_comparison_page = dash.html.Div([dash.html.Div([dash.html.Div(indcomp_chart), dash.html.Div(indcomp_chart)])])
 
         layout_indicator_comparison_page = dash.html.Div([
-            dash.html.Div(
-                dash.html.H1(id='h1_indicator',
-                             children='Please select indicator',
-                             style={'width': '1200px',
-                                    'height': '40px'})
-            ),
-            dash.html.Div(children=[
-                dash.dcc.Dropdown(id='indcomp_ind_dd',
-                                  options=indicators_dd_l,
-                                  placeholder='Select indicator',
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_split_dd',
-                                  options=split_dd_l,
-                                  placeholder='Select split option',
-                                  multi=False,
-                                  style={'width': '200px',
-                                         'height': '40px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_sector_dd',
-                                  options=sectors_dd_l,
-                                  placeholder='Select sector',
-                                  multi=True,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_industry_dd',
-                                  options=industries_dd_l,
-                                  placeholder='Select industry',
-                                  multi=True,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_ticker_highlight_dd',
-                                  options=tickers_highlight_dd_l,
-                                  placeholder='Select ticker',
-                                  multi=True,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_price_period_type',
-                                  options=price_period_type_dd_l,
-                                  placeholder=dd_chosen_price.period_type,
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_price_val_type',
-                                  options=price_val_type_dd_l,
-                                  placeholder=dd_chosen_price.val_type,
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indcomp_price_summarization',
-                                  options=price_summarization_dd_l,
-                                  placeholder=dd_chosen_price.summarization,
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
+            dash.html.Div([
+                dash.html.Div(indcomp_title, style={'display': 'inline-block', 'verticalAlign': 'middle', 'horizontalAlign': 'center', 'width': '200px', 'height': '30px'}),
+                dash.html.Div(indcomp_link_to_main, style={'display': 'inline-block', 'position': 'absolute', 'top': '0', 'right': '0', 'width': '100px', 'height': '30px'})
+                ], style={'height': '30px', 'marginBottom': 0, 'marginTop': 0}),
+            dash.html.Div([
+                dash.html.Div([indcomp_ind_dd,
+                               indcomp_split_dd,
+                               indcomp_sector_dd,
+                               indcomp_industry_dd,
+                               indcomp_ticker_highlight_dd,
+                               indcomp_price_period_type_dd,
+                               indcomp_price_val_type_dd,
+                               indcomp_price_summarization_dd
+                               ], style={'display': 'inline-block'}),
 
-            ]),
-            dash.dcc.Graph(id='indcomp_chart', figure=go.Figure(), style={'width': '1800px',
-                                                                          'height': '800px'}),
-            dashblinks.link_main()
+                dash.html.Div([indcomp_chart], style={'display': 'inline-block'}),
+            ], style={'marginBottom': 0, 'marginTop': 0})
         ])
+
 
         dash.register_page('indcomp', path='/indcomp', layout=layout_indicator_comparison_page)
 
@@ -713,7 +688,7 @@ def dashboard():
 
         @app.callback(
             dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
-            dash.Input(component_id='indcomp_price_period_type', component_property='value'),
+            dash.Input(component_id='indcomp_price_period_type_dd', component_property='value'),
             prevent_initial_call=True
         )
         def dropdown_highlighted_ticker_selection(chosen_price_period_type):
@@ -726,7 +701,7 @@ def dashboard():
 
         @app.callback(
             dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
-            dash.Input(component_id='indcomp_price_val_type', component_property='value'),
+            dash.Input(component_id='indcomp_price_val_type_dd', component_property='value'),
             prevent_initial_call=True
         )
         def dropdown_highlighted_ticker_selection(chosen_price_val_type):
@@ -739,7 +714,7 @@ def dashboard():
 
         @app.callback(
             dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
-            dash.Input(component_id='indcomp_price_summarization', component_property='value'),
+            dash.Input(component_id='indcomp_price_summarization_dd', component_property='value'),
             prevent_initial_call=True
         )
         def dropdown_highlighted_ticker_selection(chosen_price_summarization):
@@ -786,7 +761,7 @@ tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\t
 tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
 tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja]
-tickers_list = ['DIS'] #do usuniecia
+tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
 
 fin_st_tickers_dropdown_l = []
 

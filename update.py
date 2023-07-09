@@ -426,7 +426,6 @@ def update_price(ticker):
     frequencies = ['1d']
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
-
         price_df_url = download_and_prepare_price_history(ticker, frequency)
         if price_df_url is not None:
             if check_if_tables_exists(ticker_price_history, sql_table_list):

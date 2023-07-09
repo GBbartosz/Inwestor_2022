@@ -14,12 +14,14 @@ import dashboardlinks as dashblinks
 
 
 class IndcompFilters:
-    def __init__(self):
+    def __init__(self, dd_chosen_price):
         self.indicator = None
         self.split_type = 'companies'
         self.industry = []
         self.sector = []
-        self.b_chosen_period = ButtonChosenPeriod()
+        self.price_period_type = dd_chosen_price.period_type
+        self.price_val_type = dd_chosen_price.val_type
+        self.price_summarization = dd_chosen_price.summarization
         self.highlight_ticker = []
 
 
@@ -157,6 +159,22 @@ def get_chosen_fin_st(fin_st, x1, x2, x3, x4):
     return res
 
 
+def dropdown_selection_of_price_property(price_type_property, chosen_val):
+    global dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price, \
+        wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+
+    if price_type_property == 'period_type':
+        dd_chosen_price.period_type = chosen_val
+    if price_type_property == 'val_type':
+        dd_chosen_price.val_type = chosen_val
+    if price_type_property == 'summarization':
+        dd_chosen_price.summarization = chosen_val
+
+    main_chart_fig = ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price)
+
+    return main_chart_fig
+
+
 def sort_fin_st_df_columns(df):
     date_columns = [c for c in df.columns if c != 'index' and 'All' not in c]
     date_columns.sort()
@@ -181,9 +199,9 @@ def random_color():
     return color
 
 
-def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other, b_chosen_period, dd_chosen_price):
+def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price):
 
-    def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, b_chosen_period, dd_chosen_price,
+    def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, dd_chosen_price,
                           wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine):
 
         def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color):
@@ -213,23 +231,10 @@ def ticker_indicator_period_update(chosen_val, ddchosen_obj_actual, dd_obj_other
 
     main_chart_fig = go.Figure()
 
-    # gdy aktywowano przycisk
-    if chosen_val in ['year', 'quarter']:
-        ddchosen_obj_actual.name = 'ticker'
-    else:
-        ddchosen_obj_actual.update(chosen_val)
+    if dd_chosen_ticker.not_empty() and dd_chosen_indicator.not_empty():
+        create_ticker_obj(main_chart_fig, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price,
+                              wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
 
-    if chosen_val:
-        if dd_obj_other.not_empty():
-            xs = []
-            ys = []
-            names = []
-            if ddchosen_obj_actual.name == 'ticker':
-                create_ticker_obj(main_chart_fig, ddchosen_obj_actual, dd_obj_other, b_chosen_period, dd_chosen_price,
-                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
-            else:
-                create_ticker_obj(main_chart_fig, dd_obj_other, ddchosen_obj_actual, b_chosen_period, dd_chosen_price,
-                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
     return main_chart_fig
 
 
@@ -251,14 +256,21 @@ def get_marker(special, color):
     return marker
 
 
-def create_indcomp_fig(tickers_list, chosen_indicator, split_type, industry, sector, b_chosen_period_value, highlight_ticker,
-                       wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine):
+def create_indcomp_fig():
+    global tickers_list, dd_chosen_price, indcomp_filters, \
+        wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
-    indall = IndicatorAll(tickers_list, chosen_indicator, industry, sector, b_chosen_period_value,
-                       wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+    chosen_indicator = indcomp_filters.indicator
+    split_type = indcomp_filters.split_type
+    industry = indcomp_filters.industry
+    sector = indcomp_filters.sector
+    highlight_ticker = indcomp_filters.highlight_ticker
 
-    x = indall.get_x()
-    ys = indall.get_y()
+    indall = IndicatorAll(tickers_list, chosen_indicator, industry, sector, dd_chosen_price,
+                       wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+
+    xs = indall.get_xs()
+    ys = indall.get_ys()
 
     if split_type == 'companies':
         split_vals = indall.filtered_tickers_l
@@ -270,7 +282,7 @@ def create_indcomp_fig(tickers_list, chosen_indicator, split_type, industry, sec
     colors = indall.assign_colors(split_vals)
     indcomp_fig = go.Figure()
     split_vals_legend = []
-    for y, split_val, color, tic in zip(ys, split_vals, colors, indall.filtered_tickers_l):
+    for x, y, split_val, color, tic in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l):
 
         if split_val in split_vals_legend:  # show only distinct values in legend
             show_legend = False
@@ -278,8 +290,10 @@ def create_indcomp_fig(tickers_list, chosen_indicator, split_type, industry, sec
             show_legend = True
             split_vals_legend.append(split_val)
 
-        if tic in highlight_ticker: marker = get_marker(True, color)
-        else: marker = get_marker(False, color)
+        if tic in highlight_ticker:
+            marker = get_marker(True, color)
+        else:
+            marker = get_marker(False, color)
 
         indcomp_fig.add_trace(go.Scatter(x=x,
                                          y=y,
@@ -306,7 +320,7 @@ def options_for_dropdown(mylist):
 
 
 def all_options_for_dropdowns(tickers_list):
-    global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine, dd_chosen_price
+    global wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price
 
     tic = Ticker(tickers_list[0], wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
     tic.set_analysis_df()
@@ -338,6 +352,7 @@ def dashboard():
     def main_page():
         global tickers_list, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price
         tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(tickers_list)
+
         b_chosen_period = ButtonChosenPeriod()
 
         layout_main_page = dash.html.Div([
@@ -362,13 +377,6 @@ def dashboard():
                                   style={'width': '600px',
                                          'height': '80px',
                                          'display': 'inline-block'}),
-                dash.html.Button(children='year',
-                                 id='year_quarter_button',
-                                 n_clicks=0,
-                                 style={'width': '80px',
-                                        'height': '80px',
-                                        'display': 'inline-block',
-                                        'vertical-align': 'top'}),
                 dash.dcc.Dropdown(id='price_period_type_dd',
                                   options=price_period_type_dd_l,
                                   placeholder='Select price period type',
@@ -409,12 +417,13 @@ def dashboard():
         )
         def dropdown_selection_of_ticker(chosen_ticker):
             global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l, \
-                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
+                wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
             nonlocal b_chosen_period
 
             finst_link_disabled = True
-            main_chart_fig = ticker_indicator_period_update(chosen_ticker, dd_chosen_ticker, dd_chosen_indicator,
-                                                            b_chosen_period)
+            dd_chosen_ticker.update(chosen_ticker)
+            curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
+            main_chart_fig = ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price)
             if dd_chosen_ticker.not_empty() is False:
                 title_h1_ticker = 'None ticker selected'
             else:
@@ -423,7 +432,6 @@ def dashboard():
                 fin_st_tickers_dropdown_l_update, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
                 fin_st_tickers_dropdown_l = fin_st_tickers_dropdown_l_update
                 finst_link_disabled = False
-            curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
             return title_h1_ticker, main_chart_fig, finst_link_disabled
 
         @app.callback(
@@ -435,26 +443,36 @@ def dashboard():
             global dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price, \
                 wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
-            main_chart_fig = ticker_indicator_period_update(chosen_indicator, dd_chosen_indicator, dd_chosen_ticker,
-                                                            b_chosen_period, dd_chosen_price)
+            dd_chosen_indicator.update(chosen_indicator)
+            main_chart_fig = ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price)
             return main_chart_fig
 
         @app.callback(
-            dash.Output(component_id='year_quarter_button', component_property='children'),
-            dash.Output(component_id='main_chart', component_property='figure'),
-            dash.Input(component_id='year_quarter_button', component_property='n_clicks'),
+            dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='price_period_type_dd', component_property='value'),
             prevent_initial_call=True
         )
-        def year_quarter_button_action(click_num):
-            global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, \
-                wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal b_chosen_period
+        def dropdown_selection_of_price_period_type(chosen_val):
+            main_chart_fig = dropdown_selection_of_price_property('period_type', chosen_val)
+            return main_chart_fig
 
-            b_chosen_period.update(click_num)
-            main_chart_fig = ticker_indicator_period_update(b_chosen_period.val, dd_chosen_ticker, dd_chosen_indicator,
-                                                            b_chosen_period)
-            curr_choice_for_fin_st.update(dd_chosen_ticker, b_chosen_period)
-            return b_chosen_period.val, main_chart_fig
+        @app.callback(
+            dash.Output(component_id='main_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='price_val_type_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_price_period_type(chosen_val):
+            main_chart_fig = dropdown_selection_of_price_property('val_type', chosen_val)
+            return main_chart_fig
+
+        @app.callback(
+            dash.Output(component_id='main_chart', component_property='figure'),
+            dash.Input(component_id='price_summarization_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_price_period_type(chosen_val):
+            main_chart_fig = dropdown_selection_of_price_property('summarization', chosen_val)
+            return main_chart_fig
 
     def financial_statements_page():
         global dd_chosen_ticker, dd_chosen_indicator, curr_choice_for_fin_st, fin_st_tickers_dropdown_l
@@ -494,6 +512,7 @@ def dashboard():
             dash.Output(component_id='fin_st_table', component_property='data'),
             dash.Output(component_id='finst_h1_ticker_name', component_property='children'),
             dash.Input(component_id='fin_st_dd', component_property='value'),
+            prevent_initial_call=True
         )
         def update_fin_st_data_table(chosen_fin_st):
             global curr_choice_for_fin_st
@@ -528,21 +547,24 @@ def dashboard():
             return finst_b_chosen_period.val, dt
 
     def indicator_comparison():
-        global wsja_cursor, tickers_list
+        global wsja2_cursor, tickers_list
 
         def initial_options_for_dropdowns():
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            indicators_dd_l = options_for_dropdown(get_all_indicators(wsja_cursor))
+            global tickers_list, dd_chosen_price, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+            indicators_dd_l = options_for_dropdown(get_all_indicators(wsja2_cursor))
             tickers_highlight_dd_l = options_for_dropdown(tickers_list)
-            indall = IndicatorAll(tickers_list, 'p/s', [], [], 'year',
-                                  wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            indall = IndicatorAll(tickers_list, 'P/S', [], [], dd_chosen_price,
+                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
             sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
             industries_dd_l = options_for_dropdown(indall.filtered_industries)
             split_dd_l = options_for_dropdown(['companies', 'sectors', 'industries'])
-            return indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l
+            price_period_type_dd_l = options_for_dropdown(['day', 'week', 'month', 'quarter'])
+            price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+            price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
+            return indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, \
+                price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
-        indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l = initial_options_for_dropdowns()
-        indcomp_filters = IndcompFilters()
+        indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = initial_options_for_dropdowns()
 
         layout_indicator_comparison_page = dash.html.Div([
             dash.html.Div(
@@ -587,13 +609,28 @@ def dashboard():
                                   style={'width': '600px',
                                          'height': '80px',
                                          'display': 'inline-block'}),
-                dash.html.Button(children='year',
-                                 id='indcomp_year_quarter_button',
-                                 n_clicks=0,
-                                 style={'width': '80px',
-                                        'height': '80px',
-                                        'display': 'inline-block',
-                                        'vertical-align': 'top'}),
+                dash.dcc.Dropdown(id='indcomp_price_period_type',
+                                  options=price_period_type_dd_l,
+                                  placeholder=dd_chosen_price.period_type,
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.dcc.Dropdown(id='indcomp_price_val_type',
+                                  options=price_val_type_dd_l,
+                                  placeholder=dd_chosen_price.val_type,
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+                dash.dcc.Dropdown(id='indcomp_price_summarization',
+                                  options=price_summarization_dd_l,
+                                  placeholder=dd_chosen_price.summarization,
+                                  multi=False,
+                                  style={'width': '600px',
+                                         'height': '80px',
+                                         'display': 'inline-block'}),
+
             ]),
             dash.dcc.Graph(id='indcomp_chart', figure=go.Figure(), style={'width': '1800px',
                                                                           'height': '800px'}),
@@ -608,18 +645,10 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_selection_of_indicator(chosen_indicator):
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.indicator = chosen_indicator
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig, indall = create_indcomp_fig()
             return indcomp_fig
 
         @app.callback(
@@ -628,18 +657,10 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_split_selection(chosen_split_type):
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.split_type = chosen_split_type
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig, indall = create_indcomp_fig()
             return indcomp_fig
 
         @app.callback(
@@ -650,19 +671,10 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_sector_selection(chosen_sector):
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.sector = chosen_sector
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn,
-                                                     wsja_engine)
+            indcomp_fig, indall = create_indcomp_fig()
             industries_dd_l = options_for_dropdown(indall.filtered_industries)
             tickers_highlight_dd_l = options_for_dropdown(indall.filtered_tickers_l)
             return industries_dd_l, tickers_highlight_dd_l, indcomp_fig
@@ -675,18 +687,10 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_industry_selection(chosen_industry):
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.industry = chosen_industry
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig, indall = create_indcomp_fig()
             sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
             tickers_highlight_dd_l = options_for_dropdown(indall.filtered_tickers_l)
             return sectors_dd_l, tickers_highlight_dd_l, indcomp_fig
@@ -699,42 +703,52 @@ def dashboard():
             prevent_initial_call=True
         )
         def dropdown_highlighted_ticker_selection(chosen_ticker):
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.highlight_ticker = chosen_ticker
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
+            indcomp_fig, indall = create_indcomp_fig()
             sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
             industries_dd_l = options_for_dropdown(indall.filtered_industries)
             return sectors_dd_l, industries_dd_l, indcomp_fig
 
         @app.callback(
-            dash.Output(component_id='indcomp_year_quarter_button', component_property='children'),
-            dash.Output(component_id='indcomp_chart', component_property='figure'),
-            dash.Input(component_id='indcomp_year_quarter_button', component_property='n_clicks'),
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_price_period_type', component_property='value'),
             prevent_initial_call=True
         )
-        def year_quarter_button_action(click_num):
-            global wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine
-            nonlocal indcomp_filters
+        def dropdown_highlighted_ticker_selection(chosen_price_period_type):
+            global indcomp_filters, dd_chosen_price
 
-            indcomp_filters.b_chosen_period.update(click_num)
-            indcomp_fig, indall = create_indcomp_fig(tickers_list,
-                                                     indcomp_filters.indicator,
-                                                     indcomp_filters.split_type,
-                                                     indcomp_filters.industry,
-                                                     indcomp_filters.sector,
-                                                     indcomp_filters.b_chosen_period.val,
-                                                     indcomp_filters.highlight_ticker,
-                                                     wsj_cursor, wsj_conn, wsj_engine, wsja_cursor, wsja_conn, wsja_engine)
-            return indcomp_filters.b_chosen_period.val, indcomp_fig
+            dd_chosen_price.period_type = chosen_price_period_type
+            indcomp_filters.price_period_type = chosen_price_period_type
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_price_val_type', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_highlighted_ticker_selection(chosen_price_val_type):
+            global indcomp_filters, dd_chosen_price
+
+            dd_chosen_price.val_type = chosen_price_val_type
+            indcomp_filters.price_val_type = chosen_price_val_type
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_price_summarization', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_highlighted_ticker_selection(chosen_price_summarization):
+            global indcomp_filters, dd_chosen_price
+
+            dd_chosen_price.summarization = chosen_price_summarization
+            indcomp_filters.price_summarization = chosen_price_summarization
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     financial_statements_page()
@@ -779,12 +793,11 @@ fin_st_tickers_dropdown_l = []
 dd_chosen_ticker = DDChosen('ticker')
 dd_chosen_indicator = DDChosen('indicator')
 dd_chosen_price = ChoiceForPrice()
-
-
+indcomp_filters = IndcompFilters(dd_chosen_price)
 
 curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
+wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja')
 wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
 dashboard()
 end_time = time.time()

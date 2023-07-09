@@ -659,12 +659,9 @@ def get_total_number_and_range_of_all_tickers(tickers_list):
 
 def transform_dataframe_columns_with_month_names_to_numbers(dfcolumns):
     df_non_date_cols = [col for col in dfcolumns if '20' not in col]
-    print(df_non_date_cols)
     df_date_cols = [col for col in dfcolumns if '20' in col]
-    print(df_date_cols)
     df_date_cols = transform_dates_list_with_month_names_to_numbers(df_date_cols)
-    dfcolumns = df_non_date_cols[:2] + df_date_cols + [df_non_date_cols[-1]]
-    print(dfcolumns)
+    dfcolumns = df_non_date_cols[:2] + df_date_cols #+ [df_non_date_cols[-1]] last column was current
     return dfcolumns
 
 

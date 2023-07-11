@@ -321,7 +321,7 @@ class Indicator(object):
 
     def val_prev_year(self, period):
         period_pos = self.periods_list.index(period)
-        if period_pos >= 3:  # checks if 4 periods including present period are available
+        if period_pos >= 4:  # checks if 4 periods including present period are available
             prev_year_period = self.periods_list[period_pos - 4]
             res = getattr(self, prev_year_period)
         else:

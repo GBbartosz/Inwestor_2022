@@ -11,6 +11,9 @@ def create_or_replace_indicators_sql_table(ticker, table_type_names, dfs):
     analysed_tables = [f'analysis_{ticker}_{t}' for t in table_type_names]
     for analysed_table, df in zip(analysed_tables, dfs):
         if df.empty is False:
+            u.pandas_df_display_options()
+            #print(analysed_table)
+            #print(df)
             df.to_sql(analysed_table, con=engine, if_exists='replace', index=False)
 
 
@@ -49,7 +52,9 @@ def analyse(ticker_name):
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
 warnings.filterwarnings('ignore')
-analyse('META')
-analyse('AMZN')
-analyse('NFLX')
-analyse('GOOGL')
+#analyse('DIS')
+#analyse('META')
+#analyse('AMZN')
+#analyse('NFLX')
+#analyse('GOOGL')
+analyse('APA')

@@ -772,7 +772,7 @@ indcomp_filters = IndcompFilters(dd_chosen_price)
 
 curr_choice_for_fin_st = CurrentChooiceForFinStatement()
 wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja')
+wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
 wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
 dashboard()
 end_time = time.time()

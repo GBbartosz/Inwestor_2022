@@ -21,7 +21,7 @@ def analyse(ticker_name):
     finsts = FinancialStatements(ticker_name)
     valid_quarters = finsts.isq.all_periods[3:]
     periods_real = finsts.isq.all_periods_real
-    price = Price(ticker_name, periods_real, valid_quarters)
+    price = Price(ticker_name, periods_real)
 
     dfs = []
     table_type_names = []
@@ -57,4 +57,5 @@ warnings.filterwarnings('ignore')
 #analyse('AMZN')
 #analyse('NFLX')
 #analyse('GOOGL')
-analyse('APA')
+#analyse('BABA')
+analyse('ANET')

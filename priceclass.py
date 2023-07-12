@@ -5,7 +5,7 @@ import utilities as u
 
 
 class Price:
-    def __init__(self, ticker_name, period_dates_l, period_quarters_l):
+    def __init__(self, ticker_name, period_dates_l):
 
         def get_end_date(period_dates_l, loop_n, last_loop):
             if last_loop:
@@ -29,7 +29,7 @@ class Price:
         while loop_n < len(period_dates_l):
             period_date = period_dates_l[loop_n]
             start_date = period_date
-            if len(period_quarters_l) - loop_n == 1:
+            if len(period_dates_l) - loop_n == 1:
                 last_loop = True
             end_date = get_end_date(period_dates_l, loop_n, last_loop)
             price_period_df = self.price_df[(self.price_df['Date'] > start_date) & (self.price_df['Date'] <= end_date)]

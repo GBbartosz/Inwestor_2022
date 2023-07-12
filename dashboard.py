@@ -243,17 +243,17 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
 
 def get_marker(special, color):
     if special:
-        marker = dict(symbol='cross-open',
+        marker = dict(symbol='x-thin',
                       color=color,
                       size=25,
                       opacity=1,
                       line=dict(width=3))
 
     else:
-        marker = dict(symbol='circle-open',
+        marker = dict(symbol='circle',
                       color=color,
                       size=20,
-                      opacity=0.7,
+                      opacity=0.5,
                       line=dict(width=3))
 
     return marker
@@ -307,7 +307,7 @@ def create_indcomp_fig():
                                          mode='markers',
                                          showlegend=show_legend))
 
-    indcomp_fig.update_xaxes(type='category')
+    #indcomp_fig.update_xaxes(type='category')
     indcomp_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
 
     return indcomp_fig, indall
@@ -756,12 +756,12 @@ warnings.filterwarnings('ignore')
 
 #tickers_list = ['GOOGL', 'META', 'NFLX']
 tickers_l_sql_wsj = tickers_l_from_sql_tables('wsj')
-tickers_l_sql_wsja = tickers_l_from_sql_tables('wsja')
+tickers_l_sql_wsja2 = tickers_l_from_sql_tables('wsja2')
 tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\tickers_list.csv')
 tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
-tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja]
-tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
+tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
+#tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
 
 fin_st_tickers_dropdown_l = []
 

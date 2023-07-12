@@ -90,11 +90,11 @@ class IndicatorAll:
     def __price_or_no_price_indicator(self):
         sql_query = f'''SELECT Indicator FROM [wsja2].[dbo].[analysis_DIS_day_close_close]'''
         self.wsja2_cursor.execute(sql_query)
-        price_indicators = list(self.wsja2_cursor.fetchall()[0])
+        price_indicators = [x[0] for x in list(self.wsja2_cursor.fetchall())]
 
         sql_query = f'''SELECT Indicator FROM [wsja2].[dbo].[analysis_DIS_no_price]'''
         self.wsja2_cursor.execute(sql_query)
-        noprice_indicators = list(self.wsja2_cursor.fetchall()[0])
+        noprice_indicators = [x[0] for x in list(self.wsja2_cursor.fetchall())]
         return price_indicators, noprice_indicators
 
     def __filter_tickers_by_industry_sector(self):

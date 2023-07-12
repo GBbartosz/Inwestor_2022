@@ -134,6 +134,7 @@ def find_and_delete_invalid_column_names_in_all_tables():
 
     export_invalid_columns_report_to_csv(invalid_tickers)
 
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
 
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     frame1 = Frame(root).pack()
 
     button1 = Button(root, text='Analizuj', height=2, width=15, bg='SkyBlue2', activebackground='red3',
-                     command=lambda: analyse_one(entry_txt.get(), True), state=DISABLED)
+                     command=lambda: analyse_one(entry_txt.get()), state=DISABLED)
     button2 = Button(root, text='Aktualizuj', height=2, width=15, bg='SkyBlue2', activebackground='red3',
                      command=lambda: update_one(entry_txt.get()), state=DISABLED)
     button3 = Button(frame1, text='Analizuj wszystkie', height=2, width=20, bg='SkyBlue2', activebackground='red3',

@@ -5,21 +5,55 @@ import utilities as u
 
 class FinancialStatements:
     def __init__(self, ticker):
+        self.wsj_cursor, self.wsj_conn, self.wsj_engine = u.create_sql_connection('wsj')
         self.ticker_name = ticker
-        #self.isy = OneFinancialStatement('income_statement', ticker, 'y')
-        self.isq = OneFinancialStatement('income_statement', ticker, 'q')
-        #self.bay = OneFinancialStatement('balance_assets', ticker, 'y')
-        self.baq = OneFinancialStatement('balance_assets', ticker, 'q')
-        #self.bly = OneFinancialStatement('balance_liabilities', ticker, 'y')
-        self.blq = OneFinancialStatement('balance_liabilities', ticker, 'q')
-        #self.cfy = OneFinancialStatement('cash_flow', ticker, 'y')
-        self.cfq = OneFinancialStatement('cash_flow', ticker, 'q')
 
+        self.faulty_column_detected = self.FaultyColumnDetected()
+        self.__create_all_one_financial_statement()
+
+        if self.faulty_column_detected.status:  # case when faulty column detected and try to update
+            print(f'Error column detected for {self.ticker_name} (update ticker)')
+            for table, col in zip(self.faulty_column_detected.tables, self.faulty_column_detected.columns):
+                self.__drop_faulty_column(table, col)
+            self.__repair_column_name_by_updating_ticker()
+
+            self.faulty_column_detected = self.FaultyColumnDetected()
+            self.__create_all_one_financial_statement()
+
+        if self.faulty_column_detected.status:  # case when faulty column detected again and delete faulty columns without update
+            print(f'Error 2 column detected for {self.ticker_name}, (delete column without update)')
+            for table, col in zip(self.faulty_column_detected.tables, self.faulty_column_detected.columns):
+                self.__drop_faulty_column(table, col)
+            self.__create_all_one_financial_statement()
+
+    class FaultyColumnDetected:
+        def __init__(self):
+            self.status = False
+            self.tables = []
+            self.columns = []
+
+    def __drop_faulty_column(self, table, col):
+        sql_query = f'''
+                    ALTER TABLE [wsj].[dbo].[{table}]
+                    DROP COLUMN [{col}]
+                    '''
+        self.wsj_cursor.execute(sql_query)
+
+    def __repair_column_name_by_updating_ticker(self):
+        ticker_tables = u.create_basic_ticker_table_name(self.ticker_name)
+        update.update(self.ticker_name, ticker_tables)
+
+    def __create_all_one_financial_statement(self):
+        self.isq = OneFinancialStatement('income_statement', self.ticker_name, 'q', self.faulty_column_detected)
+        self.baq = OneFinancialStatement('balance_assets', self.ticker_name, 'q', self.faulty_column_detected)
+        self.blq = OneFinancialStatement('balance_liabilities', self.ticker_name, 'q', self.faulty_column_detected)
+        self.cfq = OneFinancialStatement('cash_flow', self.ticker_name, 'q', self.faulty_column_detected)
 
 class OneFinancialStatement:
-    def __init__(self, fin_st_type, ticker, period_type):
+    def __init__(self, fin_st_type, ticker, period_type, faulty_column_detected):
         self.fin_st_type = fin_st_type
         self.ticker = ticker
+        self.faulty_column_detected = faulty_column_detected
         self.period_type = period_type
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = u.create_sql_connection('wsj')
         self.table_name = ticker + '_' + fin_st_type + '_' + period_type
@@ -37,7 +71,7 @@ class OneFinancialStatement:
         self.all_periods_month_name = None
         self.all_periods_real = None
         self.__get_and_prepare_df()
-        self.__detect_errors()
+        self.__detect_errors()  # deletes invalid column (0001) and updates
         self.indicators = self.df.iloc[:, 1].to_list()
 
         if self.fin_st_type == 'income_statement':
@@ -261,34 +295,49 @@ class OneFinancialStatement:
     def __get_and_prepare_df(self):
         self.df = self.__select_all_to_df()
         self.all_periods_month_name = self.df.columns[2:]
+        self.sql_columns = self.df.columns
         self.all_periods_real = list([u.convert_date_with_month_name_to_number(c) for c in self.df.columns[2:]])  # conversion month names to numbers
         #self.df.columns = u.get_transform_dates_to_quarters(self.df.columns)
         self.df.columns = list(self.df.columns[:2]) + self.all_periods_real
         self.__add_empty_columns_to_df_to_equalize_periods_in_all_dataframes_and_update_all_periods_real()
         indicators_column = self.df.columns[1]  # aby wykluczyc kolumne ze stringami - powodowala blad w kolejnym wierszu
         self.df.loc[:, self.df.columns != indicators_column] = self.df.loc[:, self.df.columns != indicators_column].applymap(u.transform_val) # zamiana nieliczbowych znakow z liczb
+        self.__convert_thousands_to_millions()
 
     def __select_all_to_df(self):
         sql_select_all = 'SELECT * FROM [wsj].[dbo].[{}]'.format(self.table_name)
         df = pd.read_sql(sql_select_all, con=self.wsj_conn)
         return df
 
-    def __repair_column_name(self, old_col_name):
-        sql_query = f'''
-                    ALTER TABLE [wsj].[dbo].[{self.table_name}]
-                    DROP COLUMN [{old_col_name}]
-                    '''
-        self.wsj_cursor.execute(sql_query)
-        ticker_tables = u.create_basic_ticker_table_name(self.ticker)
-        update.update(self.ticker, ticker_tables)
-
     def __detect_errors(self):
-        for col in self.columns:
+        for col in self.sql_columns:
             if '0001' in col:
-                print(f'Error column detected for {self.ticker} in {self.table_name}')
-                error_detected = True
-                self.__repair_column_name(col)
-                self.__get_and_prepare_df()
+                self.faulty_column_detected.status = True
+                self.faulty_column_detected.tables.append(self.table_name)
+                self.faulty_column_detected.columns.append(col)
+
+    def __convert_thousands_to_millions(self):
+        ind_col = self.columns[1]
+        print(ind_col)
+        if 'Thousands' in ind_col:
+            if 'income_statement' in self.table_name:
+                specwords = ['margin', 'Margin', 'growth', 'Growth', 'EPS']
+                #correct_positions = [Sales Growth, COGS Growth, Gross Income Growth, Gross Profit Margin, SGA Growth, Interest Expense Growth, Pretax Income Growth, Pretax Margin, Net Income Growth, Net Margin, 'EPS (Basic)', 'EPS (Basic) Growth', 'EPS (Diluted)', 'EPS (Diluted) Growth']
+            if 'balance_assets' in self.table_name:
+                specwords = ['growth', 'Growth', 'Cash & ST Investments / Total Assets', 'Accounts Receivable Turnover', 'Asset Turnover', 'Return On Average Assets']
+                # Bad Debt/Doubtful Accounts -- sprawdzic
+            if 'balance_liabilities' in self.table_name:
+
+            if 'cash_flow' in self.table_name:
+
+            ind_in_thousands = [x for x in self.df[ind_col] if all(specword not in x for specword in specwords)]
+            print(ind_in_thousands)
+
+
+
+
+
+
 
 
 class Indicator(object):
@@ -358,29 +407,29 @@ class Indicator(object):
         return prev_year_sum
 
 
-import time
-import warnings
-def calculate_time(function, loops):
-    start_time = time.time()
-    n = 0
-    while n < loops:
-        function()
-        n += 1
-    end_time = time.time()
-    print(end_time - start_time)
-
-
-def func():
-    u.pandas_df_display_options()
-    warnings.filterwarnings('ignore')
-    fin_st_type = 'income_statement'
-    ticker = 'META'
-    period_type = 'q'
-    ofs = OneFinancialStatement(fin_st_type, ticker, period_type)
-    print(ofs.df)
-    x = ofs.Sales_Revenue.val('2022-03-31')
-    x = ofs.Sales_Revenue.quarter_year_val('2022-03-31')
-    print(x)
+#import time
+#import warnings
+#def calculate_time(function, loops):
+#    start_time = time.time()
+#    n = 0
+#    while n < loops:
+#        function()
+#        n += 1
+#    end_time = time.time()
+#    print(end_time - start_time)
+#
+#
+#def func():
+#    u.pandas_df_display_options()
+#    warnings.filterwarnings('ignore')
+#    fin_st_type = 'income_statement'
+#    ticker = 'META'
+#    period_type = 'q'
+#    ofs = OneFinancialStatement(fin_st_type, ticker, period_type)
+#    print(ofs.df)
+#    x = ofs.Sales_Revenue.val('2022-03-31')
+#    x = ofs.Sales_Revenue.quarter_year_val('2022-03-31')
+#    print(x)
 
 
 #calculate_time(func, 1)

@@ -32,12 +32,12 @@ def transform_val(val):
         val = 0
     elif val != 0 and isinstance(val, str):
         if ',' in val:
-            val = val.replace(',', '.')
+            val = val.replace(',', '')
         if '(' in val:
             val = val.replace('(', '-')
             val = val.replace(')', '')
-        if '.' in val and val.count('.') > 1:
-            val = val.replace('.', '')
+        #if '.' in val and val.count('.') > 1:
+        #    val = val.replace('.', '')
         if '%' in val:
             val = val.replace('%', '')
             val = float(val) / 100

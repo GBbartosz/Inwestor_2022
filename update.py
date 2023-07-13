@@ -192,6 +192,33 @@ def yf_price_data_timeliness(df):
     return res
 
 
+def convert_thousands_to_millions(df, num):
+
+    def rename_thousands_to_millions(df, ind_col):
+        newind_col = ind_col.replace('Thousands', 'MillionsTT')
+        df = df.rename(columns={ind_col: newind_col})
+        return df
+
+    ind_col = df.columns[1]
+    periods_cols = df.columns[2:]
+    if 'Thousands' in ind_col:
+        if num in [0, 1]:  #income_statement
+            specwords = ['margin', 'Margin', 'growth', 'Growth', 'EPS']
+            #correct_positions = [Sales Growth, COGS Growth, Gross Income Growth, Gross Profit Margin, SGA Growth, Interest Expense Growth, Pretax Income Growth, Pretax Margin, Net Income Growth, Net Margin, 'EPS (Basic)', 'EPS (Basic) Growth', 'EPS (Diluted)', 'EPS (Diluted) Growth']
+        if num in [2, 3]:  #balance_assets
+            specwords = ['growth', 'Growth', 'Cash & ST Investments / Total Assets', 'Accounts Receivable Turnover', 'Asset Turnover', 'Return On Average Assets']
+            # Bad Debt/Doubtful Accounts -- sprawdzic
+        if num in [4, 5]:  #balance_liabilities
+            specwords = ['growth', 'Growth', 'Current Ratio', 'Quick Ratio', 'Cash Ratio', 'Total Liabilities / Total Assets', 'Common Equity / Total Assets', 'Total Shareholders\' Equity / Total Assets']
+        if num in [6, 7]:  #cash_flow
+            specwords = ['growth', 'Growth', 'Net Operating Cash Flow / Sales']
+        ind_in_thousands = [x for x in df[ind_col] if all(specword not in x for specword in specwords)]
+        mask = df[ind_col].isin(ind_in_thousands)  # selecting rows to be updated
+        df.loc[mask, periods_cols] = df.loc[mask, periods_cols].applymap(lambda x: x / 1000)
+        df = rename_thousands_to_millions(df, ind_col)
+        return df
+
+
 def update(ticker, ticker_tables):
     global unsuccessful
     unsuccessful = None
@@ -342,6 +369,11 @@ def update(ticker, ticker_tables):
         if check_positions(ticker, url, positions_dic, num, df) is False:
             unsuccessful = ticker
             break
+
+        df.iloc[:, 2:] = df.iloc[:, 2:].applymap(u.transform_val)
+        if 'Thousands' in df.columns[1]:
+            print('thousands convert')
+            df = convert_thousands_to_millions(df, num)
 
         web_headers_names = list(df.columns)
 

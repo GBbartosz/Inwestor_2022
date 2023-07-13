@@ -49,6 +49,7 @@ class FinancialStatements:
         self.blq = OneFinancialStatement('balance_liabilities', self.ticker_name, 'q', self.faulty_column_detected)
         self.cfq = OneFinancialStatement('cash_flow', self.ticker_name, 'q', self.faulty_column_detected)
 
+
 class OneFinancialStatement:
     def __init__(self, fin_st_type, ticker, period_type, faulty_column_detected):
         self.fin_st_type = fin_st_type
@@ -302,7 +303,6 @@ class OneFinancialStatement:
         self.__add_empty_columns_to_df_to_equalize_periods_in_all_dataframes_and_update_all_periods_real()
         indicators_column = self.df.columns[1]  # aby wykluczyc kolumne ze stringami - powodowala blad w kolejnym wierszu
         self.df.loc[:, self.df.columns != indicators_column] = self.df.loc[:, self.df.columns != indicators_column].applymap(u.transform_val) # zamiana nieliczbowych znakow z liczb
-        self.__convert_thousands_to_millions()
 
     def __select_all_to_df(self):
         sql_select_all = 'SELECT * FROM [wsj].[dbo].[{}]'.format(self.table_name)
@@ -315,29 +315,6 @@ class OneFinancialStatement:
                 self.faulty_column_detected.status = True
                 self.faulty_column_detected.tables.append(self.table_name)
                 self.faulty_column_detected.columns.append(col)
-
-    def __convert_thousands_to_millions(self):
-        ind_col = self.columns[1]
-        print(ind_col)
-        if 'Thousands' in ind_col:
-            if 'income_statement' in self.table_name:
-                specwords = ['margin', 'Margin', 'growth', 'Growth', 'EPS']
-                #correct_positions = [Sales Growth, COGS Growth, Gross Income Growth, Gross Profit Margin, SGA Growth, Interest Expense Growth, Pretax Income Growth, Pretax Margin, Net Income Growth, Net Margin, 'EPS (Basic)', 'EPS (Basic) Growth', 'EPS (Diluted)', 'EPS (Diluted) Growth']
-            if 'balance_assets' in self.table_name:
-                specwords = ['growth', 'Growth', 'Cash & ST Investments / Total Assets', 'Accounts Receivable Turnover', 'Asset Turnover', 'Return On Average Assets']
-                # Bad Debt/Doubtful Accounts -- sprawdzic
-            if 'balance_liabilities' in self.table_name:
-
-            if 'cash_flow' in self.table_name:
-
-            ind_in_thousands = [x for x in self.df[ind_col] if all(specword not in x for specword in specwords)]
-            print(ind_in_thousands)
-
-
-
-
-
-
 
 
 class Indicator(object):

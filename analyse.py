@@ -51,11 +51,11 @@ def analyse(ticker_name):
 
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
-warnings.filterwarnings('ignore')
+#warnings.filterwarnings('ignore')
 #analyse('DIS')
 #analyse('META')
 #analyse('AMZN')
 #analyse('NFLX')
 #analyse('GOOGL')
 #analyse('BABA')
-analyse('ANET')
+#analyse('ANET')

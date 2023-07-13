@@ -245,16 +245,16 @@ def get_marker(special, color):
     if special:
         marker = dict(symbol='x-thin',
                       color=color,
-                      size=25,
+                      size=15,
                       opacity=1,
-                      line=dict(width=3))
+                      line=dict(width=1))
 
     else:
         marker = dict(symbol='circle',
                       color=color,
-                      size=20,
+                      size=10,
                       opacity=0.5,
-                      line=dict(width=3))
+                      line=dict(width=1))
 
     return marker
 
@@ -302,9 +302,9 @@ def create_indcomp_fig():
                                          y=y,
                                          name=split_val,
                                          hovertext=tic,
+                                         line=dict(color=color, width=1),
                                          marker=marker,
-                                         #marker_color=color,
-                                         mode='markers',
+                                         mode='lines+markers',
                                          showlegend=show_legend))
 
     #indcomp_fig.update_xaxes(type='category')
@@ -725,10 +725,25 @@ def dashboard():
             indcomp_fig, indall = create_indcomp_fig()
             return indcomp_fig
 
+    def dash_table():
+        global wsja2_cursor, tickers_list
+
+        def prepare_dash_data():
+
+            dt_chosen_price = ChoiceForPrice()
+            indcomp_filters = IndcompFilters(dt_chosen_price)
+            IndicatorAll(tickers_l, indicator, industry, sector, dd_chosen_price,
+                             wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+
+
+
+        layout = dash.html.Div()
+
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
-    financial_statements_page()
     main_page()
+    financial_statements_page()
     indicator_comparison()
+    dash_table()
     app.run_server(debug=True)
 
 
@@ -750,32 +765,31 @@ def tickers_l_from_sql_tables(database):
     return tickers_l_sql
 
 
-start_time = time.time()
-u.pandas_df_display_options()
-warnings.filterwarnings('ignore')
+if __name__ == '__main__':
+    start_time = time.time()
+    u.pandas_df_display_options()
+    warnings.filterwarnings('ignore')
 
-#tickers_list = ['GOOGL', 'META', 'NFLX']
-tickers_l_sql_wsj = tickers_l_from_sql_tables('wsj')
-tickers_l_sql_wsja2 = tickers_l_from_sql_tables('wsja2')
-tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\tickers_list.csv')
-tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
+    #tickers_list = ['GOOGL', 'META', 'NFLX']
+    tickers_l_sql_wsj = tickers_l_from_sql_tables('wsj')
+    tickers_l_sql_wsja2 = tickers_l_from_sql_tables('wsja2')
+    tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\tickers_list.csv')
+    tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
-tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
-#tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
+    tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
+    #tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
 
-fin_st_tickers_dropdown_l = []
+    fin_st_tickers_dropdown_l = []
 
-dd_chosen_ticker = DDChosen('ticker')
-dd_chosen_indicator = DDChosen('indicator')
-dd_chosen_price = ChoiceForPrice()
-indcomp_filters = IndcompFilters(dd_chosen_price)
+    dd_chosen_ticker = DDChosen('ticker')
+    dd_chosen_indicator = DDChosen('indicator')
+    dd_chosen_price = ChoiceForPrice()
+    indcomp_filters = IndcompFilters(dd_chosen_price)
 
-curr_choice_for_fin_st = CurrentChooiceForFinStatement()
-wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
-wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
-dashboard()
-end_time = time.time()
-print(end_time - start_time)
-
-
+    curr_choice_for_fin_st = CurrentChooiceForFinStatement()
+    wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
+    wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
+    wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
+    dashboard()
+    end_time = time.time()
+    print(end_time - start_time)

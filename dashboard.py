@@ -12,6 +12,7 @@ from tickerclass import Ticker
 import utilities as u
 import dashboardlinks as dashblinks
 import dashboardelements as dashele
+import indicatorassessment
 
 import dash_bootstrap_components as dbc
 
@@ -232,7 +233,16 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
             color = getattr(ddchosen_obj_tic, t + '_color')
             get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color)
 
-    main_chart_fig = go.Figure()
+    layout = go.Layout(
+        margin=go.layout.Margin(
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
+        )
+    )
+    main_chart_fig = go.Figure(layout=layout)
+
 
     if dd_chosen_ticker.not_empty() and dd_chosen_indicator.not_empty():
         create_ticker_obj(main_chart_fig, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price,
@@ -360,55 +370,57 @@ def dashboard():
         b_chosen_period = ButtonChosenPeriod()
 
         layout_main_page = dash.html.Div([
-            dash.html.Div(
-                dash.html.H1(id='h1_ticker_name',
-                             children='None ticker selected',
-                             style={'width': '1200px',
-                                    'height': '40px'})
-            ),
+            dash.html.Div([
+                dash.html.Div([dashele.main_h1()], style={'display': 'inline-block', 'textAlign': 'left', 'margin': '0', 'padding': '0'}),
+                dash.html.Div([
+                    dash.html.Div([dashblinks.link_finst()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                ], style={'display': 'inline-block', 'textAlign': 'right'})
+            ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div(children=[
-                dash.dcc.Dropdown(id='ticker_dd',
-                                  options=tickers_dropdown_l,
-                                  placeholder='Select ticker',
-                                  multi=True,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='indicator_dd',
-                                  options=indicators_dd_l,
-                                  placeholder='Select indicator',
-                                  multi=True,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='price_period_type_dd',
-                                  options=price_period_type_dd_l,
-                                  placeholder='Select price period type',
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='price_val_type_dd',
-                                  options=price_val_type_dd_l,
-                                  placeholder='Select price value type',
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'}),
-                dash.dcc.Dropdown(id='price_summarization_dd',
-                                  options=price_summarization_dd_l,
-                                  placeholder='Select price summarization type',
-                                  multi=False,
-                                  style={'width': '600px',
-                                         'height': '80px',
-                                         'display': 'inline-block'})],
-                style={'display': 'inline-block'}
-            ),
-            dash.dcc.Graph(id='main_chart', figure=go.Figure(), style={'width': '1800px',
-                                                                       'height': '800px'}),
-            #dash.dcc.Link(dash.html.Button('Financial statement', id='button_link_to_finst', disabled=True), id='link_to_finst', href='/finst')
-            dashblinks.link_finst(),
-            dashblinks.link_indicator_comparison()
+                dash.html.Div([
+                    dash.dcc.Dropdown(id='ticker_dd',
+                                      options=tickers_dropdown_l,
+                                      placeholder='Select ticker',
+                                      multi=True,
+                                      style=dashele.main_multi_dropdown_style(),
+                                      className = 'main_dropdown',
+                                      clearable=False),
+                    dash.dcc.Dropdown(id='indicator_dd',
+                                      options=indicators_dd_l,
+                                      placeholder='Select indicator',
+                                      multi=True,
+                                      style=dashele.main_multi_dropdown_style())
+                ], style={'textAlign': 'left'}),
+                dash.html.Div([
+                    dash.dcc.Dropdown(id='price_period_type_dd',
+                                      options=price_period_type_dd_l,
+                                      placeholder='Period',
+                                      multi=False,
+                                      style=dashele.main_single_dropdown_style()),
+                    dash.dcc.Dropdown(id='price_val_type_dd',
+                                      options=price_val_type_dd_l,
+                                      placeholder='Value',
+                                      multi=False,
+                                      style=dashele.main_single_dropdown_style()),
+                    dash.dcc.Dropdown(id='price_summarization_dd',
+                                      options=price_summarization_dd_l,
+                                      placeholder='Summarization',
+                                      multi=False,
+                                      style=dashele.main_single_dropdown_style())
+                ])
+            ], style={'margin': '0', 'padding': '0'}),
+            dash.html.Div([
+                dash.dcc.Graph(id='main_chart',
+                               figure=go.Figure(),
+                               style={'height': '80vh',
+                                      'width': '204vh',
+                                      'borderWidth': '0',
+                                      'margin': '0',
+                                      'padding': '0'},
+                               config={'displayModeBar': True})
+                           ], style={'margin': '0', 'padding': '0'})
         ])
         dash.register_page('Main', path='/', layout=layout_main_page)
 
@@ -487,27 +499,29 @@ def dashboard():
         data_table, data_columns = convert_df_to_datatable(curr_choice_for_fin_st.get_df())
 
         layout_financial_statements_page = dash.html.Div([
-            dash.html.H1(id='finst_h1_ticker_name',
-                         children='None ticker selected',
-                         style={'width': '1200px',
-                                'height': '40px'}),
-            dash.html.Div(children=[
-                dash.dcc.Dropdown(id='fin_st_dd',
-                                  options=fin_statement_dd_l,
-                                  placeholder='Select financial statement',
-                                  style={'width': '480px',
-                                         'height': '40px',
-                                         'display': 'inline-block'}),
-                dash.html.Button(id='finst_year_quarter_button',
-                                 children=curr_choice_for_fin_st.period,
-                                 n_clicks=0,
-                                 style={'width': '80px',
-                                        'height': '40px',
-                                        'display': 'inline-block',
-                                        'vertical-align': 'top'})]),
+            dash.html.Div([
+                dash.html.Div([dashele.finst_h1()], style={'display': 'inline-block', 'textAlign': 'left', 'margin': '0', 'padding': '0'}),
+                dash.html.Div([
+                    dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                ], style={'display': 'inline-block', 'textAlign': 'right'})
+            ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
+            dash.html.Div([
+                dash.html.Div([dash.dcc.Dropdown(id='fin_st_dd',
+                                                 options=fin_statement_dd_l,
+                                                 placeholder='Select financial statement',
+                                                 style=dashele.finst_dropdown_style())
+                               ], style={'display': 'inline-block', 'vertical-align': 'top'}),
+                dash.html.Div([dash.html.Button(id='finst_year_quarter_button',
+                                                children=curr_choice_for_fin_st.period,
+                                                n_clicks=0,
+                                                style=dashele.finst_button_style())
+                               ], style={'display': 'inline-block', 'vertical-align': 'top'})
+            ]),
             dash.html.Div(dash.dash_table.DataTable(id='fin_st_table',
-                                                    data=data_table)),
-            dash.dcc.Link(dash.html.Button('Main'), id='link_to_main', href='/')])
+                                                    data=data_table))
+        ])
 
         dash.register_page('finst', path='/finst', layout=layout_financial_statements_page)
 
@@ -585,28 +599,27 @@ def dashboard():
 
         indcomp_chart = dash.dcc.Graph(id='indcomp_chart',
                                      figure=go.Figure(),
-                                    style={'height': '800px', 'width': '1600px'})
+                                    style={'height': '80vh', 'width': '180vh'})
 
-        indcomp_link_to_main = dashblinks.link_main()
-
-        layout_indicator_comparison_page = dash.html.Div([dash.html.Div([dash.html.Div(indcomp_chart), dash.html.Div(indcomp_chart)])])
 
         layout_indicator_comparison_page = dash.html.Div([
             dash.html.Div([
-                dash.html.Div(indcomp_title, style={'display': 'inline-block', 'verticalAlign': 'middle', 'horizontalAlign': 'center', 'width': '200px', 'height': '30px'}),
-                dash.html.Div(indcomp_link_to_main, style={'display': 'inline-block', 'position': 'absolute', 'top': '0', 'right': '0', 'width': '100px', 'height': '30px'})
-                ], style={'height': '30px', 'marginBottom': 0, 'marginTop': 0}),
+                dash.html.Div([indcomp_title], style={'display': 'inline-block', 'textAlign': 'left', 'margin': '0', 'padding': '0'}),
+                dash.html.Div([
+                    dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    ], style={'display': 'inline-block', 'textAlign': 'right'})
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div([
-                dash.html.Div([indcomp_ind_dd,
-                               indcomp_split_dd,
-                               indcomp_sector_dd,
-                               indcomp_industry_dd,
-                               indcomp_ticker_highlight_dd,
-                               indcomp_price_period_type_dd,
-                               indcomp_price_val_type_dd,
-                               indcomp_price_summarization_dd
-                               ], style={'display': 'inline-block'}),
-
+                dash.html.Div([dash.html.Div(indcomp_ind_dd, style={'alignItems': 'top'}),
+                               dash.html.Div(indcomp_split_dd),
+                               dash.html.Div(indcomp_sector_dd),
+                               dash.html.Div(indcomp_industry_dd),
+                               dash.html.Div(indcomp_ticker_highlight_dd),
+                               dash.html.Div(indcomp_price_period_type_dd),
+                               dash.html.Div(indcomp_price_val_type_dd),
+                               dash.html.Div(indcomp_price_summarization_dd)
+                               ], style={'display': 'inline-block', 'alignItems': 'top'}),
                 dash.html.Div([indcomp_chart], style={'display': 'inline-block'}),
             ], style={'marginBottom': 0, 'marginTop': 0})
         ])
@@ -726,18 +739,69 @@ def dashboard():
             return indcomp_fig
 
     def dash_table():
-        global wsja2_cursor, tickers_list
 
-        def prepare_dash_data():
-
+        def get_total_df():
+            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
             dt_chosen_price = ChoiceForPrice()
-            indcomp_filters = IndcompFilters(dt_chosen_price)
-            IndicatorAll(tickers_l, indicator, industry, sector, dd_chosen_price,
-                             wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+            dt_indcomp_filters = IndcompFilters(dt_chosen_price)
+            all_indicators = get_all_indicators(wsja2_cursor)
+            total_df = None
+            for indicator in all_indicators:
+                this_ind = IndicatorAll(tickers_list,
+                                        indicator,
+                                        dt_indcomp_filters.industry,
+                                        dt_indcomp_filters.sector,
+                                        dt_chosen_price,
+                                        wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
 
+                if total_df is None:  # first loop
+                    total_df = pd.DataFrame({'Ticker': this_ind.filtered_tickers_l,
+                                             'Sector': this_ind.get_sectors(),
+                                             'Industry': this_ind.get_industries()})
 
+                vals = [inner_list[-1] for inner_list in this_ind.get_ys()]
+                total_df[indicator] = vals
+                total_df.iloc[:, 3:] = total_df.iloc[:, 3:].apply(lambda x: round(x, 2))
+            return total_df
 
-        layout = dash.html.Div()
+        total_df = get_total_df()
+        color_df, score_df = indicatorassessment.indicator_assessment(total_df)
+
+        total_table_layout = dash.html.Div([
+            dash.html.A(dash.html.Button('Refresh Data'), href='/data_table'),
+            dashblinks.link_main(),
+            dashblinks.link_finst(),
+            dashblinks.link_indicator_comparison(),
+            dash.dash_table.DataTable(
+                id='total_table',
+                data=total_df.to_dict('records'),
+                style_data_conditional=[{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for
+                                        i in color_df.index for c in color_df.columns],
+                columns=[{'id': c, 'name': c, 'hideable': True} for c in total_df.columns],
+                editable=True,
+                filter_action='native',
+                sort_action='native',
+                sort_mode='multi',
+                row_selectable='multi',
+                row_deletable=True,
+                style_cell={'minWidth': 85, 'maxWidth': 175, 'width': 95},
+                style_header={'whiteSpace': 'normal', 'height': 'auto'},
+                style_data={'whiteSpace': 'normal', 'height': 'auto'}
+            )
+        ])
+
+        @app.callback(
+            dash.dependencies.Output('total_table', 'style_data_conditional'),
+            dash.dependencies.Input('total_table', 'derived_virtual_indices')
+        )
+        def update_colors(derived_virtual_indices):
+            nonlocal color_df
+            color_df = color_df.reindex(derived_virtual_indices).reset_index(drop=True)
+            conditional = [{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for i in
+                           color_df.index for c in color_df.columns]
+            return conditional
+
+        dash.register_page('data_table', path='/data_table', layout=total_table_layout)
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     main_page()

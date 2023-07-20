@@ -305,8 +305,25 @@ class OneFinancialStatement:
         self.df.loc[:, self.df.columns != indicators_column] = self.df.loc[:, self.df.columns != indicators_column].applymap(u.transform_val) # zamiana nieliczbowych znakow z liczb
 
     def __select_all_to_df(self):
-        sql_select_all = 'SELECT * FROM [wsj].[dbo].[{}]'.format(self.table_name)
+
+        def __error_handler_get_rid_of_dot1_from_columns(df):  # handling error with .1 at the end of column name. Happens when columns on wsj site are duplicated
+            u.pandas_df_display_options()
+            base_columns = list(df.columns[:2])
+            columns = list(df.columns[2:])
+            remaining_columns = columns[::]
+            for col in columns:
+                if '.1' in col:
+                    del_col = col.replace('.1', '')
+                    remaining_columns.remove(del_col)
+
+            df = df[base_columns + remaining_columns]  # creates df from only valid columns - columns with .1 have more information
+            df.columns = [x.replace('.1', '') for x in list(df.columns)]  # change of columns name
+            df.to_sql(self.table_name, con=self.wsj_engine, if_exists='replace', index=False)
+            return df
+
+        sql_select_all = f'SELECT * FROM [wsj].[dbo].[{self.table_name}]'
         df = pd.read_sql(sql_select_all, con=self.wsj_conn)
+        df = __error_handler_get_rid_of_dot1_from_columns(df)
         return df
 
     def __detect_errors(self):

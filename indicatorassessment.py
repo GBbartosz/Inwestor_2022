@@ -11,39 +11,40 @@ class Grade:
         self.score_df = None
         self.color_dict = {}
         self.color_df = None
+        self.opacity = 0.4
 
     def best(self):
         #
-        self.color = '#831ef7'
+        self.color = f'rgba(131, 30, 247, {self.opacity})'
         self.score += 5
 
     def vgood(self):
         #self.color = '#00FFFF'
-        self.color = '#1e3ef7'
+        self.color = f'rgba(0, 4, 237, {self.opacity})'
         self.score += 3
 
     def good(self):
         #self.color = '#00BFFF'
-        self.color = '#3385FF'
+        self.color = f'rgba(51, 133, 255, {self.opacity})'
         self.score += 2
 
     def ok(self):
         #self.color = '#CAFF70'
-        self.color = '#99CCFF'
+        self.color = f'rgba(153, 204, 255, {self.opacity})'
         self.score += 1
 
     def bad(self):
         #self.color = '#FF7F50'
-        self.color = '#FF8888'
+        self.color = f'rgba(255, 136, 136, {self.opacity})'
         self.score -= 1
 
     def vbad(self):
         #self.color = '#FF4040'
-        self.color = '#FF3333'
+        self.color = f'rgba(255, 51, 51, {self.opacity})'
         self.score -= 3
 
     def nograde(self):
-        self.color = '#FFFFFF'
+        self.color = f'rgba(255, 255, 255, {self.opacity})'
 
     def add_column(self, col_name):
         self.color_dict[col_name] = self.ress

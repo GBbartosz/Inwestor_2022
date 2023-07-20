@@ -59,3 +59,7 @@ def analyse(ticker_name):
 #analyse('GOOGL')
 #analyse('BABA')
 #analyse('ANET')
+analyse('ALK')
+
+#drop tabeli price rozwiazuje prol=blem
+# czyli index nie uploaduje sie przy dokladaniu wierszzy, a jesli nie to w update all jest jakis blad

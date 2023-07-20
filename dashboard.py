@@ -360,6 +360,30 @@ def all_options_for_dropdowns(tickers_list):
 #    buttons_layout = dash.html.Div(children=buttons)
 #    return buttons_layout
 
+def get_total_df():
+    global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+    dt_chosen_price = ChoiceForPrice()
+    dt_indcomp_filters = IndcompFilters(dt_chosen_price)
+    all_indicators = get_all_indicators(wsja2_cursor)
+    total_df = None
+    for indicator in all_indicators:
+        this_ind = IndicatorAll(tickers_list,
+                                indicator,
+                                dt_indcomp_filters.industry,
+                                dt_indcomp_filters.sector,
+                                dt_chosen_price,
+                                wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+
+        if total_df is None:  # first loop
+            total_df = pd.DataFrame({'Ticker': this_ind.filtered_tickers_l,
+                                     'Sector': this_ind.get_sectors(),
+                                     'Industry': this_ind.get_industries()})
+
+        vals = [inner_list[-1] for inner_list in this_ind.get_ys()]
+        total_df[indicator] = vals
+        total_df.iloc[:, 3:] = total_df.iloc[:, 3:].apply(lambda x: round(x, 2))
+    return total_df
+
 
 def dashboard():
 
@@ -594,24 +618,26 @@ def dashboard():
 
         indcomp_title = dash.html.H1(id='h1_indicator',
                                      children='Indicators',
-                                     style={'position': 'absolute', 'top': '0', 'left': '0',
-                                            'margin': '0px'})
+                                     style={'font-size': '20px',
+                                            'text-align': 'center'})
 
         indcomp_chart = dash.dcc.Graph(id='indcomp_chart',
-                                     figure=go.Figure(),
-                                    style={'height': '80vh', 'width': '180vh'})
-
+                                       figure=go.Figure(),
+                                       style={'height': '90vh', 'width': '180vh'})
 
         layout_indicator_comparison_page = dash.html.Div([
             dash.html.Div([
-                dash.html.Div([indcomp_title], style={'display': 'inline-block', 'textAlign': 'left', 'margin': '0', 'padding': '0'}),
+                dash.html.Div([indcomp_title], style={'display': 'inline-block',
+                                                      'textAlign': 'left',
+                                                      'height': '3vh',
+                                                      'width': '20vh'}),
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                     ], style={'display': 'inline-block', 'textAlign': 'right'})
-                ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div([
-                dash.html.Div([dash.html.Div(indcomp_ind_dd, style={'alignItems': 'top'}),
+                dash.html.Div([dash.html.Div(indcomp_ind_dd),
                                dash.html.Div(indcomp_split_dd),
                                dash.html.Div(indcomp_sector_dd),
                                dash.html.Div(indcomp_industry_dd),
@@ -619,11 +645,10 @@ def dashboard():
                                dash.html.Div(indcomp_price_period_type_dd),
                                dash.html.Div(indcomp_price_val_type_dd),
                                dash.html.Div(indcomp_price_summarization_dd)
-                               ], style={'display': 'inline-block', 'alignItems': 'top'}),
-                dash.html.Div([indcomp_chart], style={'display': 'inline-block'}),
+                               ], style={'display': 'inline-block'}),
+                dash.html.Div([indcomp_chart], style={'display': 'inline-block', 'margin': '0vh 2vh'}),
             ], style={'marginBottom': 0, 'marginTop': 0})
         ])
-
 
         dash.register_page('indcomp', path='/indcomp', layout=layout_indicator_comparison_page)
 
@@ -740,38 +765,17 @@ def dashboard():
 
     def dash_table():
 
-        def get_total_df():
-            global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
-            dt_chosen_price = ChoiceForPrice()
-            dt_indcomp_filters = IndcompFilters(dt_chosen_price)
-            all_indicators = get_all_indicators(wsja2_cursor)
-            total_df = None
-            for indicator in all_indicators:
-                this_ind = IndicatorAll(tickers_list,
-                                        indicator,
-                                        dt_indcomp_filters.industry,
-                                        dt_indcomp_filters.sector,
-                                        dt_chosen_price,
-                                        wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
-
-                if total_df is None:  # first loop
-                    total_df = pd.DataFrame({'Ticker': this_ind.filtered_tickers_l,
-                                             'Sector': this_ind.get_sectors(),
-                                             'Industry': this_ind.get_industries()})
-
-                vals = [inner_list[-1] for inner_list in this_ind.get_ys()]
-                total_df[indicator] = vals
-                total_df.iloc[:, 3:] = total_df.iloc[:, 3:].apply(lambda x: round(x, 2))
-            return total_df
-
         total_df = get_total_df()
         color_df, score_df = indicatorassessment.indicator_assessment(total_df)
 
         total_table_layout = dash.html.Div([
-            dash.html.A(dash.html.Button('Refresh Data'), href='/data_table'),
-            dashblinks.link_main(),
-            dashblinks.link_finst(),
-            dashblinks.link_indicator_comparison(),
+            dash.html.Div([
+                dash.html.Div(dash.html.A(dash.html.Button('Refresh Data', style=dashele.data_table_button_style()), href='/data_table'), style={'display': 'inline-block', 'textAlign': 'left'}),
+                dash.html.Div([
+                    dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_indicator_comparison(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                ], style={'display': 'inline-block', 'textAlign': 'right'})
+            ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.dash_table.DataTable(
                 id='total_table',
                 data=total_df.to_dict('records'),
@@ -802,6 +806,18 @@ def dashboard():
             return conditional
 
         dash.register_page('data_table', path='/data_table', layout=total_table_layout)
+
+    def score():
+
+        total_df = get_total_df()
+        color_df, score_df = indicatorassessment.indicator_assessment(total_df)
+
+        score_layout = dash.html.Div([
+            dash.html.Div([dash.dash_table.DataTable(id='score_table',
+                                                     data=score_df.to_dict('records'))])
+            ])
+
+        dash.register_page('data_table', path='/score', layout=score_layout)
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     main_page()
@@ -841,7 +857,6 @@ if __name__ == '__main__':
     tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
     tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
-    #tickers_list = ['DIS', 'META', 'AMZN', 'NFLX', 'GOOGL'] #do usuniecia
 
     fin_st_tickers_dropdown_l = []
 

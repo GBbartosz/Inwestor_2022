@@ -78,7 +78,7 @@ def finst_button_style():
 
 def indcomp_multi_dropdown_style():
     style = {'width': '20vh',
-             'height': '12vh',
+             'height': '23vh',
              'alignItems': 'top',
              'background-color': 'white',
              'color': 'black',
@@ -103,6 +103,21 @@ def indcomp_single_dropdown_style():
              'margin': '2px 2px'}
     return style
 
+
+### data table ###
+
+def data_table_button_style():
+    style = {'width': '16vh',
+             'height': '3vh',
+             'display': 'inline-block',
+             'vertical-align': 'center',
+             'background-color': 'blue',
+             'color': 'white',
+             'borderWidth': '2px',
+             'borderColor': 'blue',
+             'borderRadius': '6px',
+             'margin': '2px 2px'}
+    return style
 
 ###   ###
 

@@ -18,15 +18,15 @@ def get_columns_only_in_sql(df, sql_df):
     return res
 
 
-def compare_changes(changel, share_ind):
+def compare_changes(changel, share_ind, s_l, ssql_l): # 2 ostatnie dodane tylko dla printu
     outcome = True
     c0 = changel[0]
     for c in changel:
-        res = c / c0
-        if res < 0.9 or res > 1.1:
-
-            print('Error stock split change for {}: {}'.format(share_ind, changel))
-            outcome = False
+        if c != 0 and c0 != 0:  # byl blad dzielenia przez 0 gdy danego wskaznika nie bylo na wsj w sql zapisywal sie jako 0 (RJF)
+            res = c / c0
+            if res < 0.9 or res > 1.1:
+                print('Error stock split change for {}: {}'.format(share_ind, changel))
+                outcome = False
     return outcome
 
 
@@ -50,7 +50,7 @@ def handle_share_split(df, sql_df, cursor, table_name):
     # czy rownize eps diluted nie powinno byc zmieniane
     diff_dict = {}
     if common_columns:
-        for share_ind in shares_indicators:
+        for share_ind in shares_indicators:  # wybrane wskazniki
             s_l = shorten_df_to_chosen_fragment(df, common_columns, df_indicators_column_name, share_ind)
             ssql_l = shorten_df_to_chosen_fragment(sql_df, common_columns, sql_df_indicators_column_name, share_ind)
             diff_l = []
@@ -58,18 +58,19 @@ def handle_share_split(df, sql_df, cursor, table_name):
                 if v != sqlv and v != '-' and sqlv != '-':
                     v = u.transform_val(v)
                     sqlv = u.transform_val(sqlv)
-                    diff_l.append(float(v) / float(sqlv))
-                    sql_update_statement = '''
-                                    UPDATE wsj.dbo.[{}]
-                                    SET [{}] = '{}'
-                                    WHERE [{}] = '{}'
-                                    '''.format(table_name, col, v, sql_df_indicators_column_name, share_ind)
-                    cursor.execute(sql_update_statement)
+                    if float(sqlv) != 0:  # wykluczneie przypadkow gdy nie ma daneog parametru na wsj w sql jest 0
+                        diff_l.append(float(v) / float(sqlv))
+                        sql_update_statement = f'''
+                                        UPDATE wsj.dbo.[{table_name}]
+                                        SET [{col}] = '{v}'
+                                        WHERE [{sql_df_indicators_column_name}] = '{share_ind}'
+                                        '''
+                        cursor.execute(sql_update_statement)
             diff_dict[share_ind] = diff_l
     if len(only_sql_columns) > 0:
         for share_ind in shares_indicators:
             if diff_dict[share_ind]:
-                if compare_changes(diff_dict[share_ind], share_ind) is False:
+                if compare_changes(diff_dict[share_ind], share_ind, s_l, ssql_l) is False:
                     break
                 change = avg(diff_dict[share_ind])
                 ssql_l = shorten_df_to_chosen_fragment(sql_df, only_sql_columns, sql_df_indicators_column_name,

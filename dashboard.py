@@ -399,7 +399,8 @@ def dashboard():
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_finst()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
-                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
             ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div(children=[
@@ -528,7 +529,8 @@ def dashboard():
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
-                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
             ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div([
@@ -623,7 +625,7 @@ def dashboard():
 
         indcomp_chart = dash.dcc.Graph(id='indcomp_chart',
                                        figure=go.Figure(),
-                                       style={'height': '90vh', 'width': '180vh'})
+                                       style={'height': '90vh', 'width': '175vh'})
 
         layout_indicator_comparison_page = dash.html.Div([
             dash.html.Div([
@@ -633,7 +635,8 @@ def dashboard():
                                                       'width': '20vh'}),
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
-                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                     ], style={'display': 'inline-block', 'textAlign': 'right'})
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.html.Div([
@@ -764,23 +767,21 @@ def dashboard():
             return indcomp_fig
 
     def dash_table():
-
-        total_df = get_total_df()
-        color_df, score_df = indicatorassessment.indicator_assessment(total_df)
+        global total_df, color_df, score_df
 
         total_table_layout = dash.html.Div([
             dash.html.Div([
                 dash.html.Div(dash.html.A(dash.html.Button('Refresh Data', style=dashele.data_table_button_style()), href='/data_table'), style={'display': 'inline-block', 'textAlign': 'left'}),
                 dash.html.Div([
                     dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
-                    dash.html.Div(dashblinks.link_indicator_comparison(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    dash.html.Div(dashblinks.link_indicator_comparison(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
             ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.dash_table.DataTable(
                 id='total_table',
                 data=total_df.to_dict('records'),
-                style_data_conditional=[{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for
-                                        i in color_df.index for c in color_df.columns],
+                style_data_conditional=[{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for i in color_df.index for c in color_df.columns],
                 columns=[{'id': c, 'name': c, 'hideable': True} for c in total_df.columns],
                 editable=True,
                 filter_action='native',
@@ -799,7 +800,7 @@ def dashboard():
             dash.dependencies.Input('total_table', 'derived_virtual_indices')
         )
         def update_colors(derived_virtual_indices):
-            nonlocal color_df
+            global color_df
             color_df = color_df.reindex(derived_virtual_indices).reset_index(drop=True)
             conditional = [{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for i in
                            color_df.index for c in color_df.columns]
@@ -808,22 +809,38 @@ def dashboard():
         dash.register_page('data_table', path='/data_table', layout=total_table_layout)
 
     def score():
-
-        total_df = get_total_df()
-        color_df, score_df = indicatorassessment.indicator_assessment(total_df)
+        global total_df, color_df, score_df
 
         score_layout = dash.html.Div([
+            dash.html.Div([
+                dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                ], style={'textAlign': 'right'}),
             dash.html.Div([dash.dash_table.DataTable(id='score_table',
-                                                     data=score_df.to_dict('records'))])
+                                                     data=score_df.to_dict('records'),
+                                                     columns=[{'id': c, 'name': c, 'hideable': True} for c in score_df.columns],
+                                                     editable=True,
+                                                     filter_action='native',
+                                                     sort_action='native',
+                                                     sort_mode='multi',
+                                                     row_selectable='multi',
+                                                     row_deletable=True,
+                                                     style_cell={'minWidth': 85, 'maxWidth': 175, 'width': 95},
+                                                     style_header={'whiteSpace': 'normal', 'height': 'auto'},
+                                                     style_data={'whiteSpace': 'normal', 'height': 'auto'}
+                                                     )
+                           ])
             ])
 
-        dash.register_page('data_table', path='/score', layout=score_layout)
+        dash.register_page('score', path='/score', layout=score_layout)
 
     app = dash.Dash(__name__, pages_folder="", use_pages=True)
     main_page()
     financial_statements_page()
     indicator_comparison()
     dash_table()
+    score()
     app.run_server(debug=True)
 
 
@@ -869,6 +886,8 @@ if __name__ == '__main__':
     wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
     wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
     wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
+    total_df = get_total_df()
+    color_df, score_df = indicatorassessment.indicator_assessment(total_df)
     dashboard()
     end_time = time.time()
     print(end_time - start_time)

@@ -1,7 +1,6 @@
 import datetime
 import time
 import datetime as dt
-import numpy as np
 import pandas as pd
 import requests
 import yfinance as yf
@@ -449,6 +448,19 @@ def update_profile(ticker, url_check_list):
     wsj_conn.close()
 
 
+class UpdatePriceIndex:
+    def __init__(self, price_df_sql, df_diff):
+        max_index_value = int(price_df_sql.iloc[0, 0])
+        max_index_after_update = int(max_index_value + len(df_diff.index))
+        self.new_indexes = list(range(max_index_value, max_index_after_update))
+        self.n = 0
+
+    def get_next_prev_index(self):
+        self.n -= 1
+        index_value = self.new_indexes[self.n]
+        return index_value
+
+
 def update_price(ticker):
 
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
@@ -465,20 +477,22 @@ def update_price(ticker):
                 price_df_sql = pd.read_sql(sql_select_all, wsj_conn)
                 price_df_sql.sort_values('Date', ascending=False, inplace=True)
                 price_df_sql.reset_index(drop=True, inplace=True)
-                if price_df_sql.iloc[0, 0] == price_df_url.iloc[0, 0]:
+                if price_df_sql['Date'][0] == price_df_url['Date'][0]:  # case when last date in sql is up to date
                     pass
                 else:
                     df_diff = pd.concat([price_df_url, price_df_sql]).drop_duplicates(subset='Date', keep=False) # yahoo zmienia dane i w efekcie daty się duplikują, konieczny subset
                     df_diff.reset_index(drop=True, inplace=True)
+                    update_price_index = UpdatePriceIndex(price_df_sql, df_diff)
                     for r in df_diff.index:
                         insert_values = [ticker_price_history]
+                        index_value = update_price_index.get_next_prev_index()
                         for c in df_diff.columns:
                             insert_values.append(df_diff[c].iloc[r])
-                        insert_values_without_index = [insert_values[0]] + insert_values[2:]
+                        insert_values_without_index = [insert_values[0]] + [index_value] + insert_values[2:]
                         #for x in insert_values_without_str:
                         #    if x is not None and x is not np.nan:
-                        sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
-                                     'VALUES (\'{1}\', {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(*insert_values_without_index)
+                        sql_insert = 'INSERT INTO [wsj].[dbo].[{0}] ([Index], [Date], [Open], [High], [Low], [Close], [Volume], [Dividends], [Stock Splits])' \
+                                     'VALUES ({1}, \'{2}\', {3}, {4}, {5}, {6}, {7}, {8}, {9})'.format(*insert_values_without_index)
                         cursor.execute(sql_insert)
                         cursor.commit()
             else:

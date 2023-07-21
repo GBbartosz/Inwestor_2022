@@ -51,7 +51,7 @@ def analyse(ticker_name):
 
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
-#warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore')
 #analyse('DIS')
 #analyse('META')
 #analyse('AMZN')
@@ -59,7 +59,7 @@ def analyse(ticker_name):
 #analyse('GOOGL')
 #analyse('BABA')
 #analyse('ANET')
-analyse('ALK')
+analyse('CVX')
 
 #drop tabeli price rozwiazuje prol=blem
 # czyli index nie uploaduje sie przy dokladaniu wierszzy, a jesli nie to w update all jest jakis blad

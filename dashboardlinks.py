@@ -38,8 +38,17 @@ def link_indicator_comparison():
 
 def link_data_table():
     obj = dash.dcc.Link(dash.html.Button('Data table',
-                                         id='button_link_to_tdata_table',
+                                         id='button_link_to_data_table',
                                          style=link_style()),
                         id='link_to_data_table',
                         href='/data_table')
+    return obj
+
+
+def link_score():
+    obj = dash.dcc.Link(dash.html.Button('Score',
+                                         id='button_link_to_score',
+                                         style=link_style()),
+                        id='link_to_score',
+                        href='/score')
     return obj

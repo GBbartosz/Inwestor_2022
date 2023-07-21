@@ -13,6 +13,7 @@ import updateglobal
 import updateindeks
 import updatenotebook as upnot
 import utilities as u
+
 import warnings
 
 
@@ -184,3 +185,6 @@ if __name__ == '__main__':
 
 
     mainloop()
+
+#432
+#NVO

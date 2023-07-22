@@ -72,7 +72,7 @@ class OneFinancialStatement:
         self.all_periods_month_name = None
         self.all_periods_real = None
         self.__get_and_prepare_df()
-        self.__detect_errors()  # deletes invalid column (0001) and updates
+        self.__detect_errors()
         self.indicators = self.df.iloc[:, 1].to_list()
 
         if self.fin_st_type == 'income_statement':
@@ -313,17 +313,31 @@ class OneFinancialStatement:
             remaining_columns = columns[::]
             for col in columns:
                 if '.1' in col:
+                    any_error_detected.status = True
                     del_col = col.replace('.1', '')
                     remaining_columns.remove(del_col)
-
             df = df[base_columns + remaining_columns]  # creates df from only valid columns - columns with .1 have more information
             df.columns = [x.replace('.1', '') for x in list(df.columns)]  # change of columns name
-            df.to_sql(self.table_name, con=self.wsj_engine, if_exists='replace', index=False)
             return df
 
+        def __error_handler_get_rid_of_unnamed(df):
+            for col in df.columns:
+                if 'Unnamed' in col:  # case when on wsj site column is empty (header)
+                    any_error_detected.status = True
+                    self.df = self.df.drop([col], axis=1)
+            return df
+
+        class AnyErrorDetected:
+            def __init__(self):
+                self.status = False
+
+        any_error_detected = AnyErrorDetected()
         sql_select_all = f'SELECT * FROM [wsj].[dbo].[{self.table_name}]'
         df = pd.read_sql(sql_select_all, con=self.wsj_conn)
+        df = __error_handler_get_rid_of_unnamed(df)
         df = __error_handler_get_rid_of_dot1_from_columns(df)
+        if any_error_detected.status:
+            df.to_sql(self.table_name, con=self.wsj_engine, if_exists='replace', index=False)
         return df
 
     def __detect_errors(self):

@@ -18,9 +18,20 @@ def create_or_replace_indicators_sql_table(ticker, table_type_names, dfs):
 
 
 def analyse(ticker_name):
+
+    def get_common_periods_real():
+        # handling case when financial statements differ in columns
+        periods_real_isq = finsts.isq.all_periods_real
+        periods_real_baq = finsts.baq.all_periods_real
+        periods_real_blq = finsts.blq.all_periods_real
+        periods_real_cfq = finsts.cfq.all_periods_real
+        periods_real = [x for x in periods_real_isq if
+                        x in periods_real_baq and x in periods_real_blq and x in periods_real_cfq]
+        return periods_real
+
     finsts = FinancialStatements(ticker_name)
     valid_quarters = finsts.isq.all_periods[3:]
-    periods_real = finsts.isq.all_periods_real
+    periods_real = get_common_periods_real()
     price = Price(ticker_name, periods_real)
 
     dfs = []
@@ -51,7 +62,7 @@ def analyse(ticker_name):
 
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
-warnings.filterwarnings('ignore')
+#warnings.filterwarnings('ignore')
 #analyse('DIS')
 #analyse('META')
 #analyse('AMZN')
@@ -59,7 +70,7 @@ warnings.filterwarnings('ignore')
 #analyse('GOOGL')
 #analyse('BABA')
 #analyse('ANET')
-analyse('CVX')
+#analyse('NKE')
 
 #drop tabeli price rozwiazuje prol=blem
 # czyli index nie uploaduje sie przy dokladaniu wierszzy, a jesli nie to w update all jest jakis blad

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -19,27 +20,22 @@ class Grade:
         self.score += 5
 
     def vgood(self):
-        #self.color = '#00FFFF'
         self.color = f'rgba(0, 4, 237, {self.opacity})'
         self.score += 3
 
     def good(self):
-        #self.color = '#00BFFF'
         self.color = f'rgba(51, 133, 255, {self.opacity})'
         self.score += 2
 
     def ok(self):
-        #self.color = '#CAFF70'
         self.color = f'rgba(153, 204, 255, {self.opacity})'
         self.score += 1
 
     def bad(self):
-        #self.color = '#FF7F50'
         self.color = f'rgba(255, 136, 136, {self.opacity})'
         self.score -= 1
 
     def vbad(self):
-        #self.color = '#FF4040'
         self.color = f'rgba(255, 51, 51, {self.opacity})'
         self.score -= 3
 
@@ -57,8 +53,11 @@ class Grade:
         self.color_df = pd.DataFrame(self.color_dict)
         return self.color_df
 
-    def get_score_df(self):
-        self.score_df = pd.DataFrame({'Ticker': self.score_dict.keys(), 'Score': self.score_dict.values()})
+    def get_score_df(self, sectors, industries):
+        self.score_df = pd.DataFrame({'Ticker': self.score_dict.keys(),
+                                      'Sector': sectors,
+                                      'Industry': industries,
+                                      'Score': self.score_dict.values()})
         return self.score_df
 
     def add_score(self):
@@ -162,6 +161,15 @@ class IndicatorAssessment:
             res = False
         self.ress.append(res)
         return res
+
+
+def grade_if_is_nan(ind_ass, grade):
+    if np.isnan(ind_ass.v):
+        grade.nograde()
+        res = True
+    else:
+        res = False
+    return res
 
 
 def indicator_assessment(df):
@@ -273,7 +281,6 @@ def indicator_assessment(df):
                 else:
                     grade.bad()
 
-
     def evaluate_p_e():
         if col == 'P/E':
             ind_ass.reset_ress()
@@ -294,9 +301,6 @@ def indicator_assessment(df):
                 else:
                     grade.bad()
 
-
-
-
     ind_ass = IndicatorAssessment(df)
     grade = Grade(ind_ass.total_df['Ticker'].values.tolist())
 
@@ -305,7 +309,6 @@ def indicator_assessment(df):
             grade.nograde()
             grade.add_res()
         grade.add_column(col)
-
 
     for col in df.columns[3:]:
         ind_ass.add(col)
@@ -318,19 +321,20 @@ def indicator_assessment(df):
             ind_ass.v = v
             ind_ass.prepare_sector_industry_grouped_values(s, i)
 
-            evaluate_roa()
-            evaluate_debt_to_equity_ratio()
-            evaluate_total_debt_to_total_assets_ratio()
-            evaluate_beneish_m_score()
-            evaluate_altman_z_score()
-            evaluate_p_s()
-            evaluate_p_e()
+            if grade_if_is_nan(ind_ass, grade) is False:  # puts white color in cells with none
+                evaluate_roa()
+                evaluate_debt_to_equity_ratio()
+                evaluate_total_debt_to_total_assets_ratio()
+                evaluate_beneish_m_score()
+                evaluate_altman_z_score()
+                evaluate_p_s()
+                evaluate_p_e()
 
             grade.add_res()  # adds colors to list
             grade.add_score()  # adds score from one indicator to total score of current ticker
         grade.add_column(col)  # joins ress lists
 
     color_df = grade.get_color_df()
-    score_df = grade.get_score_df()
+    score_df = grade.get_score_df(ind_ass.sectors, ind_ass.industries)
 
     return color_df, score_df

@@ -122,7 +122,10 @@ class IndicatorAll:
                 table_name = f'analysis_{tic_name}_no_price'
             else:
                 print('ERROR. Ivalid name of indicator')
-
+                print(table_name)
+                print(self.price_indicators)
+                print(self.noprice_indicators)
+                print(self.indicator)
             sql_query = f'''SELECT * 
                             FROM [wsja2].[dbo].[{table_name}] 
                             WHERE Indicator = \'{self.indicator}\'

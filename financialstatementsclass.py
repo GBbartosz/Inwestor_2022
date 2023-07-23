@@ -324,7 +324,7 @@ class OneFinancialStatement:
             for col in df.columns:
                 if 'Unnamed' in col:  # case when on wsj site column is empty (header)
                     any_error_detected.status = True
-                    self.df = self.df.drop([col], axis=1)
+                    df = df.drop([col], axis=1)
             return df
 
         class AnyErrorDetected:

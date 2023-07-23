@@ -183,9 +183,4 @@ if __name__ == '__main__':
     button5 = Button(root, text='Wyjście', height=2, width=10, bg='SkyBlue2', activebackground='red3', command=root.quit)\
         .pack(side=BOTTOM)
 
-
     mainloop()
-
-
-#432
-#NVO

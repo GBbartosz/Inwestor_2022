@@ -18,7 +18,7 @@ class IndicatorCalculation:
         self.period_indicators_values_l = None
         self.period_price_indicators_values_l = None
         self.noprice_indicators = ['Revenue', 'Gross Income', 'EBIT', 'EBITDA', 'NOPAT', 'Net Income', 'Research and Development', 'Total Debt', 'ROE', 'Retained Earnings', 'Stopa wzrostu', 'ROA', 'ROC', 'ROCE', 'ROIC', 'Gross Margins', 'EBITDA Margin', 'EBIT Margin', 'Net Margin', 'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue Ratio', 'Beneish M Score', 'Current Ratio', 'EPS', 'Debt Service Coverage Ratio', 'Cash Ratio', 'Operating Cash Flow Debt Ratio']
-        self.price_indicators = ['P/S', 'Altman Z Score', 'P/E', 'PEG']
+        self.price_indicators = ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG']
 
     def __get_table_type_name(self):
         return f'{self.price_subperiod}_{self.price_val_type}_{self.price_summarization}'
@@ -106,8 +106,6 @@ class IndicatorCalculation:
         net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
         res = net_income / diluted_shares_outstanding
         return res
-
-
 
 
 
@@ -368,6 +366,11 @@ class IndicatorCalculation:
     # price indicators
 
     @__null_handler_price_indicators
+    def calc_price(self):
+        res = self.pv
+        return res
+
+    @__null_handler_price_indicators
     def calc_p_s_ratio(self):
         # przydatny w wycenie akcji wzrostowych, które nie przyniosły jeszcze zysku lub doświadczyły tymczasowego niepowodzenia
         # przychód jest tylko wtedy wartościowy gdy w pewnym momencie można go przełożyć na zyski
@@ -469,6 +472,7 @@ class IndicatorCalculation:
                 self.period_price_indicators_values_l = []
                 self.pv = self.price_val[price_period]
 
+                self.calc_price()
                 self.calc_p_s_ratio()
                 self.calc_altman_z_score()
                 self.calc_p_e_ratio()

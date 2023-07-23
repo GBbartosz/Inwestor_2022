@@ -1,8 +1,9 @@
 import datetime as dt
-import pyodbc
-import sqlalchemy
+import matplotlib.colors as mcolors
 import pandas as pd
-from pandas.api.types import CategoricalDtype
+import pyodbc
+import random
+import sqlalchemy
 
 import update
 
@@ -43,23 +44,6 @@ def transform_val(val):
             val = float(val) / 100
         val = float(val)
     return val
-
-
-#def transform_val2(val):
-#    print(val)
-#    if val == '-' or val is None:
-#        val = 0
-#    else:
-#        val = val.replace(',', '.')
-#        val = val.replace('(', '-')
-#        val = val.replace(')', '')
-#        if '.' in val and val.count('.') > 1:
-#            val = val.replace('.', '')
-#        if '%' in val:
-#            val = val.replace('%', '')
-#            val = float(val) / 100
-#        val = float(val)
-#    return val
 
 
 def get_rid_of_special_characters(word):
@@ -756,43 +740,18 @@ def get_stock_currency(ticker_name, cursor):
 
 
 def colors():
-    colors = [
-            'aqua', 'blue', 'blueviolet',
-            'brown', 'burlywood', 'cadetblue',
-            'chartreuse', 'chocolate', 'coral', 'cornflowerblue',
-            'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
-            'darkgoldenrod', 'darkgray', 'darkgrey', 'darkgreen',
-            'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange',
-            'darkorchid', 'darkred', 'darksalmon', 'darkseagreen',
-            'darkslateblue', 'darkslategray', 'darkslategrey',
-            'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
-            'dimgray', 'dimgrey', 'dodgerblue', 'firebrick',
-            'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro',
-            'ghostwhite', 'gray', 'grey', 'green',
-            'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo',
-            'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
-            'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
-            'lightgoldenrodyellow', 'lightgray', 'lightgrey',
-            'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen',
-            'lightskyblue', 'lightslategray', 'lightslategrey',
-            'lightsteelblue', 'lightyellow', 'lime', 'limegreen',
-            'linen', 'magenta', 'maroon', 'mediumaquamarine',
-            'mediumblue', 'mediumorchid', 'mediumpurple',
-            'mediumseagreen', 'mediumslateblue', 'mediumspringgreen',
-            'mediumturquoise', 'mediumvioletred', 'midnightblue',
-            'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy',
-            'oldlace', 'olive', 'olivedrab', 'orange', 'orangered',
-            'orchid',  'palegreen', 'paleturquoise',
-            'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink',
-            'plum', 'powderblue', 'purple', 'red', 'rosybrown',
-            'royalblue', 'rebeccapurple', 'saddlebrown', 'salmon',
-            'sandybrown', 'seagreen', 'seashell', 'sienna', 'silver',
-            'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
-            'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
-            'turquoise', 'violet', 'wheat', 'white', 'whitesmoke',
-            'black', 'gold', 'goldenrod',
-            'yellow', 'yellowgreen', 'palegoldenrod',]
-    # 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige', 'bisque', 'blanchedalmond'
+
+    def get_random_colors(num_colors):
+        random_colors = []
+        for _ in range(num_colors):
+            # Generate random RGB values
+            r, g, b = random.random(), random.random(), random.random()
+            # Convert RGB to hexadecimal color code
+            color = mcolors.to_hex((r, g, b))
+            random_colors.append(color)
+        return random_colors
+
+    colors = get_random_colors(500)
 
     return colors
 

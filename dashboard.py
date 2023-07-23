@@ -7,14 +7,61 @@ import warnings
 
 from plotly.validators.scatter.marker import SymbolValidator
 
-from indicatorall import IndicatorAll, get_all_indicators
-from tickerclass import Ticker
-import utilities as u
 import dashboardlinks as dashblinks
 import dashboardelements as dashele
 import indicatorassessment
+import utilities as u
 
-import dash_bootstrap_components as dbc
+from indicatorall import IndicatorAll, get_all_indicators
+from tickerclass import Ticker
+
+
+class Timer:
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
+        self.action_name = None
+
+    def start(self, action_name):
+        self.action_name = action_name
+        self.start_time = time.time()
+
+    def end(self):
+        self.end_time = time.time()
+        res = self.end_time - self.start_time
+        print(f'{self.action_name}: {res}')
+
+
+class DataTableUnfiltering:
+    def __init__(self, color_df):
+        self.initial_color_df = color_df
+        self.initial_shape = color_df.shape
+        self.current_shape = self.initial_shape
+        self.table_filtered = False
+
+    def __shape1_less_than_shape2(self, shape1, shape2):
+        if shape1[0] < shape2[0] or shape1[1] < shape2[1]:
+            res = True
+        else:
+            res = False
+        return res
+
+    def sort_action(self, derived_virtual_indices):
+        color_df = self.initial_color_df.reindex(derived_virtual_indices).reset_index(drop=True)
+        return color_df
+
+    def filter_action(self, color_df):
+        self.current_shape = color_df.shape
+        if self.__shape1_less_than_shape2(self.current_shape, self.initial_shape):
+            self.table_filtered = True
+
+    def unfilter_action(self, color_df, derived_virtual_indices):
+        if self.table_filtered and self.__shape1_less_than_shape2(self.current_shape, color_df.shape):
+            color_df = self.initial_color_df.reindex(derived_virtual_indices).reset_index(drop=True)
+            self.table_filtered = False
+            self.current_shape = color_df.shape
+        return color_df
+
 
 
 class IndcompFilters:
@@ -295,7 +342,7 @@ def create_indcomp_fig():
     colors = indall.assign_colors(split_vals)
     indcomp_fig = go.Figure()
     split_vals_legend = []
-    for x, y, split_val, color, tic in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l):
+    for x, y, split_val, color, tic, sector, industry in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries()):
 
         if split_val in split_vals_legend:  # show only distinct values in legend
             show_legend = False
@@ -308,10 +355,12 @@ def create_indcomp_fig():
         else:
             marker = get_marker(False, color)
 
+        hovertext = f'{tic}<br>{sector}<br>{industry}'
+
         indcomp_fig.add_trace(go.Scatter(x=x,
                                          y=y,
                                          name=split_val,
-                                         hovertext=tic,
+                                         hovertext=hovertext,
                                          line=dict(color=color, width=1),
                                          marker=marker,
                                          mode='lines+markers',
@@ -386,11 +435,11 @@ def get_total_df():
 
 
 def dashboard():
+    global timer
 
     def main_page():
         global tickers_list, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price
         tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(tickers_list)
-
         b_chosen_period = ButtonChosenPeriod()
 
         layout_main_page = dash.html.Div([
@@ -769,6 +818,24 @@ def dashboard():
     def dash_table():
         global total_df, color_df, score_df
 
+        def color_conditional():
+            global color_df
+            timer.start('new ifs')
+            color_dict = {}
+            for c in color_df:
+                color_dict[c] = {}
+                unique_colors = color_df[c].unique()
+                for u in unique_colors:
+                    color_dict[c][u] = []
+                for i in color_df.index:
+                    color = color_df[c][i]
+                    color_dict[c][color].append(i)
+            conditional = [{'if': {'column_id': c, 'row_index': color_dict[c][color]}, 'background-color': color} for c in color_dict.keys() for color in color_dict[c].keys()]
+            timer.end()
+            return conditional
+
+        total_df_dict = total_df.to_dict('records')
+
         total_table_layout = dash.html.Div([
             dash.html.Div([
                 dash.html.Div(dash.html.A(dash.html.Button('Refresh Data', style=dashele.data_table_button_style()), href='/data_table'), style={'display': 'inline-block', 'textAlign': 'left'}),
@@ -780,10 +847,10 @@ def dashboard():
             ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
             dash.dash_table.DataTable(
                 id='total_table',
-                data=total_df.to_dict('records'),
-                style_data_conditional=[{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for i in color_df.index for c in color_df.columns],
+                data=total_df_dict,
+                style_data_conditional=color_conditional(),
                 columns=[{'id': c, 'name': c, 'hideable': True} for c in total_df.columns],
-                editable=True,
+                editable=False,
                 filter_action='native',
                 sort_action='native',
                 sort_mode='multi',
@@ -791,7 +858,8 @@ def dashboard():
                 row_deletable=True,
                 style_cell={'minWidth': 85, 'maxWidth': 175, 'width': 95},
                 style_header={'whiteSpace': 'normal', 'height': 'auto'},
-                style_data={'whiteSpace': 'normal', 'height': 'auto'}
+                style_data={'whiteSpace': 'normal', 'height': 'auto'},
+                page_size=500
             )
         ])
 
@@ -800,17 +868,18 @@ def dashboard():
             dash.dependencies.Input('total_table', 'derived_virtual_indices')
         )
         def update_colors(derived_virtual_indices):
-            global color_df
-            color_df = color_df.reindex(derived_virtual_indices).reset_index(drop=True)
-            conditional = [{'if': {'row_index': i, 'column_id': c}, 'background-color': color_df[c][i]} for i in
-                           color_df.index for c in color_df.columns]
+            global color_df, data_table_unfiltering
+            color_df = data_table_unfiltering.sort_action(derived_virtual_indices)
+            color_df = data_table_unfiltering.unfilter_action(color_df, derived_virtual_indices)
+            data_table_unfiltering.filter_action(color_df)
+            conditional = color_conditional()
+
             return conditional
 
         dash.register_page('data_table', path='/data_table', layout=total_table_layout)
 
     def score():
         global total_df, color_df, score_df
-
         score_layout = dash.html.Div([
             dash.html.Div([
                 dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
@@ -863,18 +932,17 @@ def tickers_l_from_sql_tables(database):
 
 
 if __name__ == '__main__':
-    start_time = time.time()
     u.pandas_df_display_options()
     warnings.filterwarnings('ignore')
-
-    #tickers_list = ['GOOGL', 'META', 'NFLX']
+    timer = Timer()
+    timer0 = Timer()
     tickers_l_sql_wsj = tickers_l_from_sql_tables('wsj')
     tickers_l_sql_wsja2 = tickers_l_from_sql_tables('wsja2')
     tickers_l_csv = pd.read_csv(r'C:\Users\barto\Desktop\Inwestor_2023\source_data\tickers_list.csv')
     tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
     tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
-
+    #tickers_list = ['META', 'AAPL', 'GOOGL']
     fin_st_tickers_dropdown_l = []
 
     dd_chosen_ticker = DDChosen('ticker')
@@ -888,6 +956,6 @@ if __name__ == '__main__':
     wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
     total_df = get_total_df()
     color_df, score_df = indicatorassessment.indicator_assessment(total_df)
+    data_table_unfiltering = DataTableUnfiltering(color_df)
     dashboard()
-    end_time = time.time()
-    print(end_time - start_time)
+

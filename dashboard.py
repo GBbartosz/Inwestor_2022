@@ -1,4 +1,7 @@
 import dash
+
+from dash.dash_table.Format import Format, Scheme
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -61,7 +64,6 @@ class DataTableUnfiltering:
             self.table_filtered = False
             self.current_shape = color_df.shape
         return color_df
-
 
 
 class IndcompFilters:
@@ -176,6 +178,7 @@ class CurrentChooiceForFinStatement:
                                        self.b_chosen_period.condition_return_val(tic.cf_df_y, tic.cf_df_q))
         return df
 
+
 # musi wpływać na wybór tablic przez klasę Ticker
 class ChoiceForPrice:
     def __init__(self):
@@ -270,7 +273,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
                                                     line=dict(color=color),
                                                     marker=dict(symbol=marker,
                                                                 size=10)))
-            #main_chart_fig.update_xaxes(type='category')
+            # main_chart_fig.update_xaxes(type='category')
 
         for t in ddchosen_obj_tic.elements:
             tic = Ticker(t, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine, dd_chosen_price)
@@ -289,7 +292,6 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
         )
     )
     main_chart_fig = go.Figure(layout=layout)
-
 
     if dd_chosen_ticker.not_empty() and dd_chosen_indicator.not_empty():
         create_ticker_obj(main_chart_fig, dd_chosen_ticker, dd_chosen_indicator, dd_chosen_price,
@@ -366,7 +368,7 @@ def create_indcomp_fig():
                                          mode='lines+markers',
                                          showlegend=show_legend))
 
-    #indcomp_fig.update_xaxes(type='category')
+    # indcomp_fig.update_xaxes(type='category')
     indcomp_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
 
     return indcomp_fig, indall
@@ -395,19 +397,6 @@ def all_options_for_dropdowns(tickers_list):
     price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
     return tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
-#def navigation_panel(current_page):
-#
-#    def create_button(txt, page, disabled):
-#        button = dash.dcc.Link(dash.html.Button(txt), href='/' + page, disabled=disabled)
-#        return button
-#
-#    pages = {'Main': '', 'Financial statements': 'fin_st'}
-#    buttons = []
-#    for page_name in pages.keys():
-#        if pages[page_name] != current_page:
-#            buttons.append(create_button(page_name, pages[page_name]))
-#    buttons_layout = dash.html.Div(children=buttons)
-#    return buttons_layout
 
 def get_total_df():
     global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
@@ -518,7 +507,6 @@ def dashboard():
                 title_h1_ticker = 'None ticker selected'
             else:
                 title_h1_ticker = dd_chosen_ticker.elements
-                #fin_st_tickers_dropdown_l_update, indicators_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
                 fin_st_tickers_dropdown_l_update, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = all_options_for_dropdowns(dd_chosen_ticker.elements)
                 fin_st_tickers_dropdown_l = fin_st_tickers_dropdown_l_update
                 finst_link_disabled = False
@@ -834,6 +822,15 @@ def dashboard():
             timer.end()
             return conditional
 
+        def custom_format(col_name):
+            # applying format 123 or 123.00 for selected columns
+            myformat = Format
+            if col_name in ['Revenue', 'Gross Income', 'EBIT', 'EBITDA', 'NOPAT', 'Net Income', 'Research and Development', 'Total Debt']:
+                myformat = Format(precision=0, scheme=Scheme.fixed)
+            elif col_name in ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG', 'ROE', 'Retained Earnings', 'Stopa wzrostu', 'ROA', 'ROC', 'ROCE', 'ROIC', 'Gross Margins', 'EBITDA Margins', 'EBIT Margins', 'Net Margins', 'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue Ratio', 'Beneish M Score', 'Current Ratio', 'EPS', 'Debt Service Coverage Ratio', 'Cash Ratio', 'Operationg Cash Flow Debt Ratio']:
+                myformat = Format(precision=2, scheme=Scheme.fixed)
+            return myformat
+
         total_df_dict = total_df.to_dict('records')
 
         total_table_layout = dash.html.Div([
@@ -849,7 +846,7 @@ def dashboard():
                 id='total_table',
                 data=total_df_dict,
                 style_data_conditional=color_conditional(),
-                columns=[{'id': c, 'name': c, 'hideable': True} for c in total_df.columns],
+                columns=[{'id': c, 'name': c, 'hideable': True, 'type': 'numeric', 'format': custom_format(c)} for c in total_df.columns],
                 editable=False,
                 filter_action='native',
                 sort_action='native',
@@ -952,10 +949,8 @@ if __name__ == '__main__':
 
     curr_choice_for_fin_st = CurrentChooiceForFinStatement()
     wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-    wsja_cursor, wsja_conn, wsja_engine = u.create_sql_connection('wsja')
     wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
     total_df = get_total_df()
     color_df, score_df = indicatorassessment.indicator_assessment(total_df)
     data_table_unfiltering = DataTableUnfiltering(color_df)
     dashboard()
-

@@ -76,9 +76,9 @@ def finst_button_style():
 ### indcomp ###
 
 
-def indcomp_multi_dropdown_style():
-    style = {'width': '20vh',
-             'height': '23vh',
+def indcomp_multi_dropdown_style(width, height):
+    style = {'width': width,
+             'height': height,
              'alignItems': 'top',
              'background-color': 'white',
              'color': 'black',
@@ -90,9 +90,9 @@ def indcomp_multi_dropdown_style():
     return style
 
 
-def indcomp_single_dropdown_style():
-    style = {'width': '20vh',
-             'height': '4vh',
+def indcomp_single_dropdown_style(width, height):
+    style = {'width': width,
+             'height': height,
              'alignItems': 'top',
              'background-color': 'white',
              'color': 'black',
@@ -123,9 +123,9 @@ def data_table_button_style():
 
 def dropdown_ele(id, options, placeholder, multi, width, height):
     if multi:
-        style = indcomp_multi_dropdown_style()
+        style = indcomp_multi_dropdown_style(width, height)
     else:
-        style = indcomp_single_dropdown_style()
+        style = indcomp_single_dropdown_style(width, height)
 
     ele = dash.dcc.Dropdown(id=id,
                             options=options,

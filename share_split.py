@@ -1,9 +1,6 @@
 import utilities as u
 
 
-
-
-
 def get_name_of_column_with_indicator_names(tdf):
     column_name = tdf.columns[1]
     return column_name
@@ -18,7 +15,7 @@ def get_columns_only_in_sql(df, sql_df):
     return res
 
 
-def compare_changes(changel, share_ind, s_l, ssql_l): # 2 ostatnie dodane tylko dla printu
+def compare_changes(changel, share_ind, s_l, ssql_l):  # 2 ostatnie dodane tylko dla printu
     outcome = True
     c0 = changel[0]
     for c in changel:

@@ -61,12 +61,13 @@ class TicBranch:
 
 
 class IndicatorAll:
-    def __init__(self, tickers_l, indicator, industry, sector, dd_chosen_price,
+    def __init__(self, tickers_l, chosen_tickers, indicator, industry, sector, dd_chosen_price,
                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine):
 
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
         self.wsja2_cursor, self.wsja2_conn, self.wsja2_engine = wsja2_cursor, wsja2_conn, wsja2_engine
         self.tickers_l = tickers_l
+        self.chosen_tickers = chosen_tickers
         self.indicator = indicator
         self.sector = sector
         self.industry = industry
@@ -81,7 +82,8 @@ class IndicatorAll:
         self.__filter_tickers_by_industry_sector()
 
         self.dict = None
-        self.__get_dictionary()
+        if indicator is not None:
+            self.__get_dictionary()
 
         #rows = wsja2_cursor.execute('SELECT Indicators from wsja.dbo.analysis_META_year').fetchall()
         #self.indicators_l = [r[0] for r in rows]
@@ -101,8 +103,22 @@ class IndicatorAll:
         for tic in self.tickers_l:
             tic_industry = getattr(self.tic_branches, tic).industry
             tic_sector = getattr(self.tic_branches, tic).sector
-            if (len(self.industry) == 0 or tic_industry in self.industry) and (len(self.sector) == 0 or tic_sector in self.sector):
+            conditions_met = False
+            conditions_met2 = False
+            if len(self.industry) > 0 and len(self.sector) > 0:  # wybrana kategoria industry and sector
+                if tic_industry in self.industry and tic_sector in self.sector:  # czy ticker zalicza sie do obu
+                    conditions_met = True
+            elif len(self.industry) > 0 and tic_industry in self.industry:  # wybrany tylko industry i czy ticker sie zalicza
+                conditions_met = True
+            elif len(self.sector) > 0 and tic_sector in self.sector:  # wybrany tylko sector i czy ticker sie zalicza
+                conditions_met = True
+            if tic in self.chosen_tickers:  # czy ticker nalezy do wybranych tickerow
+                conditions_met2 = True
+
+            if conditions_met is True or conditions_met2 is True:  # spelniony warunek industry/sector or wybrany ticker
                 self.filtered_tickers_l.append(tic)
+
+            if (len(self.industry) == 0 and len(self.sector) == 0) or conditions_met is True:  # brak wybranych industry/sector aby wyswietlic wszystkie lub wybrany industry/sector aby ograniczyc liste wyboru industry/sector
                 self.filtered_industries.add(tic_industry)
                 self.filtered_sectors.add(tic_sector)
 
@@ -122,10 +138,9 @@ class IndicatorAll:
                 table_name = f'analysis_{tic_name}_no_price'
             else:
                 print('ERROR. Ivalid name of indicator')
-                print(table_name)
+                print(self.indicator)
                 print(self.price_indicators)
                 print(self.noprice_indicators)
-                print(self.indicator)
             sql_query = f'''SELECT * 
                             FROM [wsja2].[dbo].[{table_name}] 
                             WHERE Indicator = \'{self.indicator}\'

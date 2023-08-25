@@ -5,6 +5,7 @@ from dash.dash_table.Format import Format, Scheme
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import subprocess
 import time
 import warnings
 
@@ -72,10 +73,23 @@ class IndcompFilters:
         self.split_type = 'companies'
         self.industry = []
         self.sector = []
+        self.chosen_tickers = []
         self.price_period_type = dd_chosen_price.period_type
         self.price_val_type = dd_chosen_price.val_type
         self.price_summarization = dd_chosen_price.summarization
         self.highlight_ticker = []
+
+
+class IiFilters:
+    def __init__(self):
+        global tickers_list
+        self.x_indicator = None
+        self.y_indicator = None
+        self.tickers = tickers_list
+        self.industry = []
+        self.sector = []
+        self.split_type = 'companies'
+        self.dd_chosen_price = ChoiceForPrice()
 
 
 class DDChosen:
@@ -326,50 +340,54 @@ def create_indcomp_fig():
     split_type = indcomp_filters.split_type
     industry = indcomp_filters.industry
     sector = indcomp_filters.sector
+    chosen_tickers = indcomp_filters.chosen_tickers
     highlight_ticker = indcomp_filters.highlight_ticker
 
-    indall = IndicatorAll(tickers_list, chosen_indicator, industry, sector, dd_chosen_price,
-                       wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+    indall = IndicatorAll(tickers_list, chosen_tickers, chosen_indicator, industry, sector, dd_chosen_price,
+                          wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
 
-    xs = indall.get_xs()
-    ys = indall.get_ys()
+    if indcomp_filters.indicator is None:
+        indcomp_fig = go.Figure()
+    else:
+        xs = indall.get_xs()
+        ys = indall.get_ys()
 
-    if split_type == 'companies':
-        split_vals = indall.filtered_tickers_l
-    elif split_type == 'sectors':
-        split_vals = indall.get_sectors()
-    elif split_type == 'industries':
-        split_vals = indall.get_industries()
+        if split_type == 'companies':
+            split_vals = indall.filtered_tickers_l
+        elif split_type == 'sectors':
+            split_vals = indall.get_sectors()
+        elif split_type == 'industries':
+            split_vals = indall.get_industries()
 
-    colors = indall.assign_colors(split_vals)
-    indcomp_fig = go.Figure()
-    split_vals_legend = []
-    for x, y, split_val, color, tic, sector, industry in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries()):
+        colors = indall.assign_colors(split_vals)
+        indcomp_fig = go.Figure()
+        split_vals_legend = []
+        for x, y, split_val, color, tic, sector, industry in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries()):
 
-        if split_val in split_vals_legend:  # show only distinct values in legend
-            show_legend = False
-        else:
-            show_legend = True
-            split_vals_legend.append(split_val)
+            if split_val in split_vals_legend:  # show only distinct values in legend
+                show_legend = False
+            else:
+                show_legend = True
+                split_vals_legend.append(split_val)
 
-        if tic in highlight_ticker:
-            marker = get_marker(True, color)
-        else:
-            marker = get_marker(False, color)
+            if tic in highlight_ticker:
+                marker = get_marker(True, color)
+            else:
+                marker = get_marker(False, color)
 
-        hovertext = f'{tic}<br>{sector}<br>{industry}'
+            hovertext = f'{tic}<br>{sector}<br>{industry}'
 
-        indcomp_fig.add_trace(go.Scatter(x=x,
-                                         y=y,
-                                         name=split_val,
-                                         hovertext=hovertext,
-                                         line=dict(color=color, width=1),
-                                         marker=marker,
-                                         mode='lines+markers',
-                                         showlegend=show_legend))
+            indcomp_fig.add_trace(go.Scatter(x=x,
+                                             y=y,
+                                             name=split_val,
+                                             hovertext=hovertext,
+                                             line=dict(color=color, width=1),
+                                             marker=marker,
+                                             mode='lines+markers',
+                                             showlegend=show_legend))
 
-    # indcomp_fig.update_xaxes(type='category')
-    indcomp_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
+        # indcomp_fig.update_xaxes(type='category')
+        indcomp_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
 
     return indcomp_fig, indall
 
@@ -406,6 +424,7 @@ def get_total_df():
     total_df = None
     for indicator in all_indicators:
         this_ind = IndicatorAll(tickers_list,
+                                dt_indcomp_filters.chosen_tickers,
                                 indicator,
                                 dt_indcomp_filters.industry,
                                 dt_indcomp_filters.sector,
@@ -437,6 +456,7 @@ def dashboard():
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_finst()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
@@ -566,6 +586,7 @@ def dashboard():
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
@@ -634,7 +655,8 @@ def dashboard():
             global tickers_list, dd_chosen_price, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
             indicators_dd_l = options_for_dropdown(get_all_indicators(wsja2_cursor))
             tickers_highlight_dd_l = options_for_dropdown(tickers_list)
-            indall = IndicatorAll(tickers_list, 'P/S', [], [], dd_chosen_price,
+            indcomp_chosen_tickers_dd_l = options_for_dropdown(tickers_list)
+            indall = IndicatorAll(tickers_list, [], 'P/S', [], [], dd_chosen_price,
                                   wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
             sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
             industries_dd_l = options_for_dropdown(indall.filtered_industries)
@@ -642,18 +664,19 @@ def dashboard():
             price_period_type_dd_l = options_for_dropdown(['day', 'week', 'month', 'quarter'])
             price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
             price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
-            return indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, \
+            return indicators_dd_l, indcomp_chosen_tickers_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, \
                 price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
-        indicators_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = initial_options_for_dropdowns()
-        indcomp_ind_dd = dashele.dropdown_ele('indcomp_ind_dd', indicators_dd_l, 'Select indicator', False, 200, 40)
-        indcomp_split_dd = dashele.dropdown_ele('indcomp_split_dd', split_dd_l, 'Select split option', False, 200, 40)
-        indcomp_sector_dd = dashele.dropdown_ele('indcomp_sector_dd', sectors_dd_l, 'Select sector', True, 200, 200)
-        indcomp_industry_dd = dashele.dropdown_ele('indcomp_industry_dd', industries_dd_l, 'Select industry', True, 200, 200)
-        indcomp_ticker_highlight_dd = dashele.dropdown_ele('indcomp_ticker_highlight_dd', tickers_highlight_dd_l, 'Select ticker', True, 200, 200)
-        indcomp_price_period_type_dd = dashele.dropdown_ele('indcomp_price_period_type_dd', price_period_type_dd_l, dd_chosen_price.period_type, False, 200, 40)
-        indcomp_price_val_type_dd = dashele.dropdown_ele('indcomp_price_val_type_dd', price_val_type_dd_l, dd_chosen_price.val_type, False, 200, 40)
-        indcomp_price_summarization_dd = dashele.dropdown_ele('indcomp_price_summarization_dd', price_summarization_dd_l, dd_chosen_price.summarization, False, 200, 40)
+        indicators_dd_l, indcomp_chosen_tickers_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l = initial_options_for_dropdowns()
+        indcomp_ind_dd = dashele.dropdown_ele('indcomp_ind_dd', indicators_dd_l, 'Select indicator', False, '20vh', '4vh')
+        indcomp_split_dd = dashele.dropdown_ele('indcomp_split_dd', split_dd_l, 'Select split option', False, '20vh', '4vh')
+        indcomp_sector_dd = dashele.dropdown_ele('indcomp_sector_dd', sectors_dd_l, 'Select sector', True, '20vh', '20vh')
+        indcomp_industry_dd = dashele.dropdown_ele('indcomp_industry_dd', industries_dd_l, 'Select industry', True, '20vh', '20vh')
+        indcomp_chosen_tickers_dd = dashele.dropdown_ele('indcomp_chosen_tickers_dd', indcomp_chosen_tickers_dd_l, 'Select ticker', True, '20vh', '20vh')
+        indcomp_ticker_highlight_dd = dashele.dropdown_ele('indcomp_ticker_highlight_dd', tickers_highlight_dd_l, 'Select highlighted ticker', True, '20vh', '9vh')
+        indcomp_price_period_type_dd = dashele.dropdown_ele('indcomp_price_period_type_dd', price_period_type_dd_l, dd_chosen_price.period_type, False, '20vh', '4vh')
+        indcomp_price_val_type_dd = dashele.dropdown_ele('indcomp_price_val_type_dd', price_val_type_dd_l, dd_chosen_price.val_type, False, '20vh', '4vh')
+        indcomp_price_summarization_dd = dashele.dropdown_ele('indcomp_price_summarization_dd', price_summarization_dd_l, dd_chosen_price.summarization, False, '20vh', '4vh')
 
         indcomp_title = dash.html.H1(id='h1_indicator',
                                      children='Indicators',
@@ -672,6 +695,7 @@ def dashboard():
                                                       'width': '20vh'}),
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                     ], style={'display': 'inline-block', 'textAlign': 'right'})
@@ -681,6 +705,7 @@ def dashboard():
                                dash.html.Div(indcomp_split_dd),
                                dash.html.Div(indcomp_sector_dd),
                                dash.html.Div(indcomp_industry_dd),
+                               dash.html.Div(indcomp_chosen_tickers_dd),
                                dash.html.Div(indcomp_ticker_highlight_dd),
                                dash.html.Div(indcomp_price_period_type_dd),
                                dash.html.Div(indcomp_price_val_type_dd),
@@ -701,7 +726,10 @@ def dashboard():
             global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
 
             indcomp_filters.indicator = chosen_indicator
-            indcomp_fig, indall = create_indcomp_fig()
+            if indcomp_filters.indicator is None:
+                indcomp_fig = go.Figure()
+            else:
+                indcomp_fig, indall = create_indcomp_fig()
             return indcomp_fig
 
         @app.callback(
@@ -747,6 +775,18 @@ def dashboard():
             sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
             tickers_highlight_dd_l = options_for_dropdown(indall.filtered_tickers_l)
             return sectors_dd_l, tickers_highlight_dd_l, indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='indcomp_chosen_tickers_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_chosen_tickers_selection(chosen_tickers):
+            global tickers_list, indcomp_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+
+            indcomp_filters.chosen_tickers = chosen_tickers
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
 
         @app.callback(
             dash.Output(component_id='indcomp_sector_dd', component_property='options'),
@@ -824,7 +864,7 @@ def dashboard():
 
         def custom_format(col_name):
             # applying format 123 or 123.00 for selected columns
-            myformat = Format
+            myformat = Format()
             if col_name in ['Revenue', 'Gross Income', 'EBIT', 'EBITDA', 'NOPAT', 'Net Income', 'Research and Development', 'Total Debt']:
                 myformat = Format(precision=0, scheme=Scheme.fixed)
             elif col_name in ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG', 'ROE', 'Retained Earnings', 'Stopa wzrostu', 'ROA', 'ROC', 'ROCE', 'ROIC', 'Gross Margins', 'EBITDA Margins', 'EBIT Margins', 'Net Margins', 'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue Ratio', 'Beneish M Score', 'Current Ratio', 'EPS', 'Debt Service Coverage Ratio', 'Cash Ratio', 'Operationg Cash Flow Debt Ratio']:
@@ -839,6 +879,7 @@ def dashboard():
                 dash.html.Div([
                     dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_indicator_comparison(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'display': 'inline-block', 'textAlign': 'right'})
             ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
@@ -875,12 +916,204 @@ def dashboard():
 
         dash.register_page('data_table', path='/data_table', layout=total_table_layout)
 
+    def indicators_intersection():
+        global total_df
+
+        def initial_options_for_dropdowns_ii():
+            indicators_dd_l = options_for_dropdown(get_all_indicators(wsja2_cursor))
+            tickers_dd_l = options_for_dropdown(tickers_list)
+            indall = IndicatorAll(tickers_list, [], 'P/S', [], [], dd_chosen_price,
+                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+            sectors_dd_l = options_for_dropdown(indall.filtered_sectors)
+            industries_dd_l = options_for_dropdown(indall.filtered_industries)
+            split_dd_l = options_for_dropdown(['companies', 'sectors', 'industries'])
+            return indicators_dd_l, tickers_dd_l, sectors_dd_l, industries_dd_l, split_dd_l
+
+        def create_ii_fig():
+            global ii_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+
+            # selecting both indicators is necessary to proceed
+            if ii_filters.x_indicator is None or ii_filters.y_indicator is None:
+                ii_fig = go.Figure()
+                return ii_fig, None, None
+
+            x_ind = IndicatorAll(ii_filters.tickers, [], ii_filters.x_indicator, ii_filters.industry, ii_filters.sector,
+                                 ii_filters.dd_chosen_price,
+                                 wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+            xs = [x[-1] for x in x_ind.get_ys()]
+            y_ind = IndicatorAll(ii_filters.tickers, [], ii_filters.y_indicator, ii_filters.industry, ii_filters.sector,
+                                 ii_filters.dd_chosen_price,
+                                 wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
+            ys = [y[-1] for y in y_ind.get_ys()]
+
+            if ii_filters.split_type == 'companies':
+                split_vals = x_ind.filtered_tickers_l
+            elif ii_filters.split_type == 'sectors':
+                split_vals = x_ind.get_sectors()
+            elif ii_filters.split_type == 'industries':
+                split_vals = x_ind.get_industries()
+
+            colors = x_ind.assign_colors(split_vals)
+            ii_fig = go.Figure()
+            split_vals_legend = []
+            for x, y, split_val, color, tic, sector, industry in zip(xs, ys, split_vals, colors, x_ind.filtered_tickers_l,
+                                                                     x_ind.get_sectors(), x_ind.get_industries()):
+
+                if split_val in split_vals_legend:  # show only distinct values in legend
+                    show_legend = False
+                else:
+                    show_legend = True
+                    split_vals_legend.append(split_val)
+
+                marker = get_marker(False, color)
+                hovertext = f'{tic}<br>{sector}<br>{industry}'
+
+                ii_fig.add_trace(go.Scatter(x=[x],
+                                            y=[y],
+                                            name=split_val,
+                                            hovertext=hovertext,
+                                            marker=marker,
+                                            mode='markers',
+                                            showlegend=show_legend))
+
+            ii_fig.update_layout(margin=dict(l=20, r=0, t=0, b=20))
+
+            return ii_fig, x_ind, y_ind
+
+        indicators_dd_l, tickers_dd_l, sectors_dd_l, industries_dd_l, split_dd_l = initial_options_for_dropdowns_ii()
+        ii_ind_dd_x = dashele.dropdown_ele('ii_ind_dd_x', indicators_dd_l, 'Select first indicator', False, '20vh', '4vh')
+        ii_ind_dd_y = dashele.dropdown_ele('ii_ind_dd_y', indicators_dd_l, 'Select second indicator', False, '20vh', '4vh')
+        ii_ticker_dd = dashele.dropdown_ele('ii_ticker_dd', tickers_dd_l, 'Select ticker', True, '20vh', '23vh')
+        ii_sector_dd = dashele.dropdown_ele('ii_sector_dd', sectors_dd_l, 'Select sector', True, '20vh', '23vh')
+        ii_industry_dd = dashele.dropdown_ele('ii_industry_dd', industries_dd_l, 'Select industry', True, '20vh', '23vh')
+        ii_split_dd = dashele.dropdown_ele('ii_split_dd', split_dd_l, 'Select split option', False, '20vh', '4vh')
+
+        ii_title = dash.html.H1(id='h1_ii',
+                                     children='Indicators intersection',
+                                     style={'font-size': '20px',
+                                            'text-align': 'center'})
+
+        ii_chart = dash.dcc.Graph(id='ii_chart',
+                                       figure=go.Figure(),
+                                       style={'height': '90vh', 'width': '175vh'})
+
+        layout_ii_page = dash.html.Div([
+            dash.html.Div([
+                dash.html.Div([ii_title], style={'display': 'inline-block',
+                                                 'textAlign': 'left',
+                                                 'height': '3vh',
+                                                 'width': '20vh'}),
+                dash.html.Div([
+                    dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                    dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
+                    ], style={'display': 'inline-block', 'textAlign': 'right'})
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
+            dash.html.Div([
+                dash.html.Div([dash.html.Div(ii_ind_dd_x),
+                               dash.html.Div(ii_ind_dd_y),
+                               dash.html.Div(ii_ticker_dd),
+                               dash.html.Div(ii_sector_dd),
+                               dash.html.Div(ii_industry_dd),
+                               dash.html.Div(ii_split_dd)
+                               ], style={'display': 'inline-block'}),
+                dash.html.Div([ii_chart], style={'display': 'inline-block', 'margin': '0vh 2vh'}),
+            ], style={'marginBottom': 0, 'marginTop': 0})
+        ])
+
+        dash.register_page('ii', path='/ii', layout=layout_ii_page)
+
+        @app.callback(
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_ind_dd_x', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_x_indicator(chosen_indicator):
+            global ii_filters
+
+            ii_filters.x_indicator = chosen_indicator
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            return ii_fig
+
+        @app.callback(
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_ind_dd_y', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_selection_of_y_indicator(chosen_indicator):
+            global ii_filters
+
+            ii_filters.y_indicator = chosen_indicator
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            return ii_fig
+
+        @app.callback(
+            dash.Output(component_id='ii_sector_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_industry_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_ticker_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_ticker_selection(chosen_ticker):
+            global ii_filters
+
+            ii_filters.tickers = chosen_ticker
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
+            industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
+            return sectors_dd_l, industries_dd_l, ii_fig
+
+        @app.callback(
+            dash.Output(component_id='ii_industry_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_ticker_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_sector_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_sector_selection(chosen_sector):
+            global ii_filters
+
+            ii_filters.sector = chosen_sector
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
+            tickers_dd_l = options_for_dropdown(x_ind.filtered_tickers_l)
+            return industries_dd_l, tickers_dd_l, ii_fig
+
+        @app.callback(
+            dash.Output(component_id='ii_sector_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_ticker_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_industry_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_industry_selection(chosen_industry):
+            global ii_filters
+
+            ii_filters.industry = chosen_industry
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
+            tickers_dd_l = options_for_dropdown(x_ind.filtered_tickers_l)
+            return sectors_dd_l, tickers_dd_l, ii_fig
+
+        @app.callback(
+            dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Input(component_id='ii_split_dd', component_property='value'),
+            prevent_initial_call=True
+        )
+        def dropdown_split_selection(chosen_split_type):
+            global ii_filters
+
+            ii_filters.split_type = chosen_split_type
+            ii_fig, x_ind, y_ind = create_ii_fig()
+            return ii_fig
+
     def score():
         global total_df, color_df, score_df
         score_layout = dash.html.Div([
             dash.html.Div([
                 dash.html.Div(dashblinks.link_main(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                 dash.html.Div([dashblinks.link_indicator_comparison()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
+                dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                 dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                 ], style={'textAlign': 'right'}),
             dash.html.Div([dash.dash_table.DataTable(id='score_table',
@@ -905,8 +1138,12 @@ def dashboard():
     main_page()
     financial_statements_page()
     indicator_comparison()
+    indicators_intersection()
     dash_table()
     score()
+    #chrome_path = "C:\Program Files\Google\Chrome\Application/chrome.exe"
+    #url = 'http://127.0.0.1:8050/'
+    #subprocess.Popen([chrome_path, url])
     app.run_server(debug=True)
 
 
@@ -946,6 +1183,7 @@ if __name__ == '__main__':
     dd_chosen_indicator = DDChosen('indicator')
     dd_chosen_price = ChoiceForPrice()
     indcomp_filters = IndcompFilters(dd_chosen_price)
+    ii_filters = IiFilters()
 
     curr_choice_for_fin_st = CurrentChooiceForFinStatement()
     wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')

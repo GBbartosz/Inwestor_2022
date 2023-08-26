@@ -2,6 +2,8 @@ import pandas as pd
 import update
 import utilities as u
 
+from collections import Counter
+
 
 class FinancialStatements:
     def __init__(self, ticker):
@@ -274,9 +276,29 @@ class OneFinancialStatement:
             self.Net_Operating_Cash_Flow_Sales = None
 
         ind_name_list = self.indicators
+        self.reporting_frequency = self.__examine_reporting_frequency()
         for ind_name, index_num in zip(ind_name_list, self.df.index):
             ind_name = u.get_rid_of_special_characters(ind_name)
-            setattr(self, str(ind_name), Indicator(index_num, self.all_periods_real, self.df))
+            setattr(self, str(ind_name), Indicator(index_num, self.all_periods_real, self.df, self.reporting_frequency))
+
+    def __examine_reporting_frequency(self):
+        periods_years = [p[:4] for p in self.all_periods_real]  # selecting only years from date ('2021-06-30')
+        periods_years_counter = Counter(periods_years)  # counting instances of specifiic year
+        if len(periods_years_counter) > 2:  # if minimum 1 full year
+            full_years = list(periods_years_counter.keys())[1:-1]  # only full years
+            periods_years_dict = {k: v for k, v in dict(periods_years_counter).items() if k in full_years}  # full years with count
+            first_element_count = list(periods_years_dict.values())[0]
+            all_equal = all(v == first_element_count for v in periods_years_dict.values())  # whether all counts are equal
+            if all_equal and first_element_count == 2:
+                reporting_frequency = 'half_year'
+            elif all_equal and first_element_count == 4:
+                reporting_frequency = 'quarter'
+            else:
+                print('ERROR! Different length of full years!')
+                reporting_frequency = 'quarter'
+        else:  # default frequency when not sufficient data
+            reporting_frequency = 'quarter'
+        return reporting_frequency
 
     def __add_empty_columns_to_df_to_equalize_periods_in_all_dataframes_and_update_all_periods_real(self):
         self.columns = list(self.df.columns[:2]) # kolumny index i wskazniki
@@ -349,8 +371,14 @@ class OneFinancialStatement:
 
 
 class Indicator(object):
-    def __init__(self, i, periods_list, df):
+    def __init__(self, i, periods_list, df, reporting_frequency):
         self.periods_list = periods_list
+        self.reporting_frequency = reporting_frequency
+        self.periods_to_full_year = None
+        if self.reporting_frequency == 'quarter':
+            self.periods_to_full_year = 4
+        elif self.reporting_frequency == 'half_year':
+            self.periods_to_full_year = 2
         for p in self.periods_list:
             val = df[p][i]
             val = u.transform_val(val)
@@ -378,8 +406,8 @@ class Indicator(object):
 
     def val_prev_year(self, period):
         period_pos = self.periods_list.index(period)
-        if period_pos >= 4:  # checks if 4 periods including present period are available
-            prev_year_period = self.periods_list[period_pos - 4]
+        if period_pos >= self.periods_to_full_year:  # checks if 4 periods including present period are available
+            prev_year_period = self.periods_list[period_pos - self.periods_to_full_year]
             res = getattr(self, prev_year_period)
         else:
             res = None
@@ -388,10 +416,10 @@ class Indicator(object):
     def quarter_year_val(self, period):
         # returns sum of last four quarters
         period_pos = self.periods_list.index(period)
-        if period_pos >= 3:  # checks if 4 periods including present period are available
+        if period_pos >= self.periods_to_full_year - 1:  # checks if 4 periods including present period are available
             i = 0
             year_sum = 0
-            while i < 4:
+            while i < self.periods_to_full_year:
                 year_sum += getattr(self, period)  # add value from period
                 period = self.__get_previous_quarter(period)  # get previous period
                 i += 1
@@ -402,11 +430,11 @@ class Indicator(object):
     def previous_year_quarter_year_val(self, period):
         # returns sum from four quarters, 4 quarters ago
         period_pos = self.periods_list.index(period)
-        if period_pos >= 7:  # checks if 8 periods including present period are available
+        if period_pos >= self.periods_to_full_year * 2 - 1:  # checks if 8 periods including present period are available
             i = 0
             prev_year_sum = 0
-            while i < 8:
-                if i >= 4:
+            while i < self.periods_to_full_year * 2:
+                if i >= self.periods_to_full_year:
                     prev_year_sum += getattr(self, period)  # add value from period
                     period = self.__get_previous_quarter(period)  # get previous period
                 i += 1

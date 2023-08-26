@@ -1,6 +1,10 @@
 import pandas as pd
 import math
 
+# add indicator  name to self.noprice_indicators or self.price_indicators
+# create indicator
+# add function to update_indicators_without_price or update_indicators_with_price
+
 
 class IndicatorCalculation:
     def __init__(self, finsts, price, price_subperiod, price_val_type, price_summarization, periods_real):
@@ -18,7 +22,7 @@ class IndicatorCalculation:
         self.period_indicators_values_l = None
         self.period_price_indicators_values_l = None
         self.noprice_indicators = ['Revenue', 'Gross Income', 'EBIT', 'EBITDA', 'NOPAT', 'Net Income', 'Research and Development', 'Total Debt', 'ROE', 'Retained Earnings', 'Stopa wzrostu', 'ROA', 'ROC', 'ROCE', 'ROIC', 'Gross Margins', 'EBITDA Margin', 'EBIT Margin', 'Net Margin', 'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue Ratio', 'Beneish M Score', 'Current Ratio', 'EPS', 'Debt Service Coverage Ratio', 'Cash Ratio', 'Operating Cash Flow Debt Ratio']
-        self.price_indicators = ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG']
+        self.price_indicators = ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG', 'Market Capitalization']
 
     def __get_table_type_name(self):
         return f'{self.price_subperiod}_{self.price_val_type}_{self.price_summarization}'
@@ -40,6 +44,8 @@ class IndicatorCalculation:
                     res = None
             except (ZeroDivisionError, TypeError):
                 res = None
+            if isinstance(res, float):
+                res = round(res, 2)
             self.period_indicators_values_l.append(res)
         return inner
 
@@ -51,6 +57,8 @@ class IndicatorCalculation:
                     res = None
             except (ZeroDivisionError, TypeError):
                 res = None
+            if isinstance(res, float):
+                res = round(res, 2)
             self.period_price_indicators_values_l.append(res)
         return inner
 
@@ -416,6 +424,11 @@ class IndicatorCalculation:
         res = (self.pv / self.eps()) / eps_basic_growth / 100
         return res
 
+    @__null_handler_price_indicators
+    def calc_market_capitalization(self):
+        res = self.pv * self.finsts.isq.Basic_Shares_Outstanding.val(self.period_real)
+        return res
+
     def update_indicators_without_price(self):
         self.df = pd.DataFrame()
         self.df['Ticker'] = len(self.noprice_indicators) * [self.ticker_name]
@@ -477,6 +490,7 @@ class IndicatorCalculation:
                 self.calc_altman_z_score()
                 self.calc_p_e_ratio()
                 self.calc_peg()
+                self.calc_market_capitalization()
 
                 self.df[price_period] = self.period_price_indicators_values_l
 

@@ -1,3 +1,4 @@
+import pandas as pd
 import utilities as u
 import warnings
 
@@ -29,7 +30,28 @@ def analyse(ticker_name):
                         x in periods_real_baq and x in periods_real_blq and x in periods_real_cfq]
         return periods_real
 
+    def update_currency(ticker, wsj_cursor, wsj_conn):
+        # adds currency to profile table based on currency in column header in income_statement_q
+        profile_df = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', wsj_conn)
+        currency = None
+        if 'Currency' not in profile_df.columns:
+            main_caption = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_income_statement_q', wsj_conn).columns[1]
+            if ' USD ' in main_caption:
+                currency = 'USD'
+            elif ' EUR ' in main_caption:
+                currency = 'EUR'
+            elif ' HKD ' in main_caption:
+                currency = 'HKD'
+            else:
+                print(f'{ticker} has unprecedented value! (tickerclass - 39)')
+            if currency is not None:
+                wsj_cursor.execute(f'ALTER TABLE {ticker}_profile ADD Currency varchar(3)')
+                wsj_cursor.execute(f'UPDATE {ticker}_profile SET Currency = \'{currency}\'')
+
     finsts = FinancialStatements(ticker_name)
+    update_currency(finsts.ticker_name, finsts.wsj_cursor, finsts.wsj_conn)
+    print(finsts.ticker_name)
+    print(finsts.isq.reporting_frequency)
     valid_quarters = finsts.isq.all_periods[3:]
     periods_real = get_common_periods_real()
     price = Price(ticker_name, periods_real)
@@ -62,15 +84,16 @@ def analyse(ticker_name):
 
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
 
-#warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore')
 #analyse('DIS')
-#analyse('META')
+analyse('META')
 #analyse('AMZN')
 #analyse('NFLX')
 #analyse('GOOGL')
 #analyse('BABA')
 #analyse('ANET')
 #analyse('NKE')
+
 
 #drop tabeli price rozwiazuje prol=blem
 # czyli index nie uploaduje sie przy dokladaniu wierszzy, a jesli nie to w update all jest jakis blad

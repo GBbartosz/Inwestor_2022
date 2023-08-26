@@ -739,6 +739,17 @@ def get_stock_currency(ticker_name, cursor):
     return currency
 
 
+def fixed_tickers_colors():
+    mydict = {'AMD': '#000000',
+              'AMZN': '#ff9900',
+              'GOOGL': '#34A853',
+              'META': '#0080FB',
+              'MSFT': '#FFB900',
+              'NFLX': '#D81F26'
+    }
+    return mydict
+
+
 def colors():
 
     def get_random_colors(num_colors):

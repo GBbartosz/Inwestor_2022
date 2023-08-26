@@ -1,5 +1,4 @@
-import datetime
-import pandas as pd
+import matplotlib.colors as mcolors
 import utilities as u
 
 
@@ -52,11 +51,14 @@ class TicBranch:
             profile_vals = wsj_cursor.fetchall()
             sector = profile_vals[0][0]
             industry = profile_vals[0][1]
+            currency = profile_vals[0][3]
             setattr(self, 'sector', sector)
             setattr(self, 'industry', industry)
+            setattr(self, 'currency', currency)
         self.tic_name = tic_name
         self.sector = None
         self.industry = None
+        self.currency = None
         get_sector_industry()
 
 
@@ -126,11 +128,12 @@ class IndicatorAll:
         # fulfill dictionary wiht indicator values from every ticker
         # ticker: [tic1, tic2], 2022-1: [1, 3]
 
-        self.dict = {key: [] for key in ['tickers', 'sector', 'industry', 'xs', 'ys']}
+        self.dict = {key: [] for key in ['tickers', 'sector', 'industry', 'currency', 'xs', 'ys']}
         for tic_name in self.filtered_tickers_l:
             self.dict['tickers'] = self.dict['tickers'] + [tic_name]
             self.dict['sector'] = self.dict['sector'] + [getattr(self.tic_branches, tic_name).sector]
             self.dict['industry'] = self.dict['industry'] + [getattr(self.tic_branches, tic_name).industry]
+            self.dict['currency'] = self.dict['currency'] + [getattr(self.tic_branches, tic_name).currency]
 
             if self.indicator in self.price_indicators:
                 table_name = f'analysis_{tic_name}_{self.dd_chosen_price.period_type}_{self.dd_chosen_price.val_type}_{self.dd_chosen_price.summarization}'
@@ -166,6 +169,9 @@ class IndicatorAll:
     def get_industries(self):
         return self.dict['industry']
 
+    def get_currencies(self):
+        return self.dict['currency']
+
     def assign_colors(self, mylist):
         #colors = sns.color_palette("Paired")
         colors = u.colors()
@@ -173,65 +179,7 @@ class IndicatorAll:
         if len(colors) < len(distinct_values):
             print('ERROR! lista unikalnych wartosci jest dluzsza od listy kolorow')
         distinctval_color_dict = dict(zip(distinct_values, colors))
+        fixed_colors = u.fixed_tickers_colors()  # import dictionary with colors assigned to tickers
+        distinctval_color_dict = {vk: fixed_colors[vk] if vk in fixed_colors.keys() else vv for vk, vv in distinctval_color_dict.items()}  # update with fixed colors
         res_colors = [distinctval_color_dict[x] for x in mylist]
         return res_colors
-
-
-#class ChoiceForPrice:
-#    def __init__(self):
-#        self.period_type = 'quarter'
-#        self.val_type = 'Close'
-#        self.summarization = 'close'
-#
-#        self.table_name_type = self.__get_table_name_type()
-#
-#    def __get_table_name_type(self):
-#        return f'{self.period_type}_{self.val_type}_{self.summarization}'
-#
-#    def update(self, period_type=None, val_type=None, summarization=None):
-#        if period_type:
-#            self.period_type = period_type
-#        elif val_type:
-#            self.val_type = val_type
-#        elif summarization:
-#            self.summarization = summarization
-
-#u.pandas_df_display_options()
-#wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-#wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
-#tickers_list = ['DIS']
-#dd_chosen_price = ChoiceForPrice()
-#industry = ''
-#sector = ''
-#get_all_indicators(wsja2_cursor)
-
-#sectors, industries = all_sectors_industries(tickers_list)
-#
-#psq = IndicatorAll(tickers_list, 'P/S', industry, sector, dd_chosen_price, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
-#print(psq.get_xs())
-#print(psq.get_ys())
-
-
-
-
-
-
-
-#data=pd.DataFrame({'dates': ['2022', '2023', '2022', '2023', '2022', '2023'],
-#                   'vals': [1, 1.2, 1.7, 1.8, 3, 2.8],
-#                   'ticker': ['META', 'META', 'GOOGL', 'GOOGL', 'NETFLIX', 'NETFLIX']})
-#
-#data = data.pivot(index='ticker', columns='dates')['vals'].fillna(0)
-#print(data)
-
-#fig = go.Figure()
-#for tic in data.index:
-#    print(data[data.index == tic].iloc[0, :].tolist())
-#    fig.add_trace(go.Scatter(x=data.columns,
-#                             y=data[data.index == tic].iloc[0, :].tolist(),
-#                             text=tic,
-#                             mode='lines+markers',
-#                             line = dict(shape = 'linear', color = 'rgb(205, 12, 24)', width= 0.3, dash = 'dash')))
-#fig.show()
-
-

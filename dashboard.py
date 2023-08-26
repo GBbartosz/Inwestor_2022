@@ -117,7 +117,11 @@ class DDChosen:
     def assign_color_to_ticker(self, ticker_name):
         if ticker_name not in self.elements_colors:
             self.elements_colors.append(ticker_name)
-            color = random_color()
+            fixed_colors = u.fixed_tickers_colors()
+            if ticker_name in fixed_colors.keys():
+                color = fixed_colors[ticker_name]
+            else:
+                color = random_color()
             setattr(self, ticker_name + '_color', color)
 
     def assign_marker_to_indicator(self, indicator_name):
@@ -272,7 +276,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
     def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, dd_chosen_price,
                           wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine):
 
-        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color):
+        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, currency):
 
             for indicator_name in ddchosen_obj_ind.elements:
                 ddchosen_obj_ind.assign_marker_to_indicator(indicator_name)
@@ -281,9 +285,11 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
                 x.sort()
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + indicator_name
+                hovertext = f'{tic.name}<br>{indicator_name}<br>{currency}'
                 main_chart_fig.add_trace(go.Scatter(x=x,
                                                     y=y,
                                                     name=n,
+                                                    hovertext=hovertext,
                                                     line=dict(color=color),
                                                     marker=dict(symbol=marker,
                                                                 size=10)))
@@ -295,7 +301,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
             tic.create_indicators()
             ddchosen_obj_tic.assign_color_to_ticker(t)
             color = getattr(ddchosen_obj_tic, t + '_color')
-            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color)
+            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, tic.currency)
 
     layout = go.Layout(
         margin=go.layout.Margin(
@@ -362,7 +368,7 @@ def create_indcomp_fig():
         colors = indall.assign_colors(split_vals)
         indcomp_fig = go.Figure()
         split_vals_legend = []
-        for x, y, split_val, color, tic, sector, industry in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries()):
+        for x, y, split_val, color, tic, sector, industry, currency in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries(), indall.get_currencies()):
 
             if split_val in split_vals_legend:  # show only distinct values in legend
                 show_legend = False
@@ -375,7 +381,7 @@ def create_indcomp_fig():
             else:
                 marker = get_marker(False, color)
 
-            hovertext = f'{tic}<br>{sector}<br>{industry}'
+            hovertext = f'{tic}<br>{sector}<br>{industry}<br>{currency}'
 
             indcomp_fig.add_trace(go.Scatter(x=x,
                                              y=y,
@@ -420,6 +426,7 @@ def get_total_df():
     global tickers_list, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
     dt_chosen_price = ChoiceForPrice()
     dt_indcomp_filters = IndcompFilters(dt_chosen_price)
+    dt_indcomp_filters.chosen_tickers = tickers_list  # to display all tickers
     all_indicators = get_all_indicators(wsja2_cursor)
     total_df = None
     for indicator in all_indicators:
@@ -917,7 +924,6 @@ def dashboard():
         dash.register_page('data_table', path='/data_table', layout=total_table_layout)
 
     def indicators_intersection():
-        global total_df
 
         def initial_options_for_dropdowns_ii():
             indicators_dd_l = options_for_dropdown(get_all_indicators(wsja2_cursor))

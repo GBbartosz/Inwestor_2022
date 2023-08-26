@@ -30,7 +30,9 @@ class Ticker:
         self.indicators_names_l = None
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = wsj_cursor, wsj_conn, wsj_engine
         self.wsja2_cursor, self.wsja2_conn, self.wsja2_engine = wsja2_cursor, wsja2_conn, wsja2_engine
-        sector_industry = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', self.wsj_conn).iloc[0, :].tolist()
+        profile_df = pd.read_sql(f'SELECT * FROM wsj.dbo.{ticker}_profile', self.wsj_conn)
+        self.currency = profile_df['Currency'][0]
+        sector_industry = profile_df.iloc[0, :].tolist()
         self.sector = sector_industry[0]
         self.industry = sector_industry[1]
         self.analysis_price_table_name = f'[wsja2].[dbo].[analysis_{self.name}_{dd_chosen_price.period_type}_{dd_chosen_price.val_type}_{dd_chosen_price.summarization}]'

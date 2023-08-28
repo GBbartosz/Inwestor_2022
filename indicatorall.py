@@ -51,14 +51,17 @@ class TicBranch:
             profile_vals = wsj_cursor.fetchall()
             sector = profile_vals[0][0]
             industry = profile_vals[0][1]
-            currency = profile_vals[0][3]
+            fs_currency = profile_vals[0][3]
+            p_currency = profile_vals[0][4]
             setattr(self, 'sector', sector)
             setattr(self, 'industry', industry)
-            setattr(self, 'currency', currency)
+            setattr(self, 'fs_currency', fs_currency)
+            setattr(self, 'p_currency', p_currency)
         self.tic_name = tic_name
         self.sector = None
         self.industry = None
-        self.currency = None
+        self.fs_currency = None
+        self.p_currency = None
         get_sector_industry()
 
 
@@ -128,12 +131,13 @@ class IndicatorAll:
         # fulfill dictionary wiht indicator values from every ticker
         # ticker: [tic1, tic2], 2022-1: [1, 3]
 
-        self.dict = {key: [] for key in ['tickers', 'sector', 'industry', 'currency', 'xs', 'ys']}
+        self.dict = {key: [] for key in ['tickers', 'sector', 'industry', 'fs_currency', 'p_currency', 'xs', 'ys']}
         for tic_name in self.filtered_tickers_l:
             self.dict['tickers'] = self.dict['tickers'] + [tic_name]
             self.dict['sector'] = self.dict['sector'] + [getattr(self.tic_branches, tic_name).sector]
             self.dict['industry'] = self.dict['industry'] + [getattr(self.tic_branches, tic_name).industry]
-            self.dict['currency'] = self.dict['currency'] + [getattr(self.tic_branches, tic_name).currency]
+            self.dict['fs_currency'] = self.dict['fs_currency'] + [getattr(self.tic_branches, tic_name).fs_currency]
+            self.dict['p_currency'] = self.dict['p_currency'] + [getattr(self.tic_branches, tic_name).p_currency]
 
             if self.indicator in self.price_indicators:
                 table_name = f'analysis_{tic_name}_{self.dd_chosen_price.period_type}_{self.dd_chosen_price.val_type}_{self.dd_chosen_price.summarization}'
@@ -169,8 +173,11 @@ class IndicatorAll:
     def get_industries(self):
         return self.dict['industry']
 
-    def get_currencies(self):
-        return self.dict['currency']
+    def get_fs_currencies(self):
+        return self.dict['fs_currency']
+
+    def get_p_currencies(self):
+        return self.dict['p_currency']
 
     def assign_colors(self, mylist):
         #colors = sns.color_palette("Paired")

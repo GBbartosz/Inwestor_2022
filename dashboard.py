@@ -276,7 +276,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
     def create_ticker_obj(main_chart_fig, ddchosen_obj_tic, ddchosen_obj_ind, dd_chosen_price,
                           wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine):
 
-        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, currency):
+        def get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, fs_currency, price_currency):
 
             for indicator_name in ddchosen_obj_ind.elements:
                 ddchosen_obj_ind.assign_marker_to_indicator(indicator_name)
@@ -285,7 +285,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
                 x.sort()
                 y = getattr(tic, indicator_name).values
                 n = tic.name + '_' + indicator_name
-                hovertext = f'{tic.name}<br>{indicator_name}<br>{currency}'
+                hovertext = f'{tic.name}<br>{indicator_name}<br>FS: {fs_currency}, P: {price_currency}'
                 main_chart_fig.add_trace(go.Scatter(x=x,
                                                     y=y,
                                                     name=n,
@@ -301,7 +301,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
             tic.create_indicators()
             ddchosen_obj_tic.assign_color_to_ticker(t)
             color = getattr(ddchosen_obj_tic, t + '_color')
-            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, tic.currency)
+            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, tic.fs_currency, tic.price_currency)
 
     layout = go.Layout(
         margin=go.layout.Margin(
@@ -368,7 +368,7 @@ def create_indcomp_fig():
         colors = indall.assign_colors(split_vals)
         indcomp_fig = go.Figure()
         split_vals_legend = []
-        for x, y, split_val, color, tic, sector, industry, currency in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries(), indall.get_currencies()):
+        for x, y, split_val, color, tic, sector, industry, fs_currency, price_currency in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries(), indall.get_fs_currencies(), indall.get_price_currencies()):
 
             if split_val in split_vals_legend:  # show only distinct values in legend
                 show_legend = False
@@ -381,7 +381,7 @@ def create_indcomp_fig():
             else:
                 marker = get_marker(False, color)
 
-            hovertext = f'{tic}<br>{sector}<br>{industry}<br>{currency}'
+            hovertext = f'{tic}<br>{sector}<br>{industry}<br>FS: {fs_currency}, P: {price_currency}'
 
             indcomp_fig.add_trace(go.Scatter(x=x,
                                              y=y,

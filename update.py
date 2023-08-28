@@ -32,45 +32,6 @@ def inside_apostrophe(word):
     return word
 
 
-def download_and_prepare_price_history(ticker, frequency):
-    global unsuccessful
-    data_downloaded = False
-    while data_downloaded is False:
-        try:
-            df = pd.DataFrame()
-            tic = yf.Ticker(ticker)
-            df = tic.history(period='max', interval=frequency)
-        except:
-            pass
-        else:
-            data_downloaded = True
-    if df.empty:
-        unsuccessful = ticker
-        print('{0} is not valid for yfinance'.format(ticker))
-        return None
-    if 'Date' not in df.columns:
-        #df['Date'] = df.index
-        df = df.reset_index()
-    if yf_price_data_timeliness(df) is False:
-        pass
-        #download data from other source
-
-    if frequency == '1mo':
-        df.sort_values('Date', ascending=False, inplace=True)
-        df.drop(index=df.index[0], axis=0, inplace=True)
-    df.reset_index(drop=False, inplace=True)
-    df['Date'] = df['Date'].apply(lambda x: str(dt.datetime.strptime(str(x)[:-6], '%Y-%m-%d %H:%M:%S').date()))
-    #df['Date'] = df['Date'].apply(lambda x: str(x)[:10])
-    df.dropna(inplace=True)
-    #for col in df.columns:
-    #    for r in df.index:
-    #        if df[col].iloc[r] == np.nan or df[col].iloc[r] == None or df[col].iloc[r] == 'NULL':
-    #            df.drop(labels=r, axis=0, inplace=True)
-    df.sort_values('Date', ascending=False, inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-
 def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
     def validate_url_list(url_empty_check_list, link_insert, link_insert_options, validation):
         def prepare_to_next_attempt(attempts, attempts_level, link_insert, link_insert_options):
@@ -82,7 +43,6 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
             attempts += 1
             return attempts, attempts_level, link_insert
 
-
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
         url_ok = False
         attempts = 1
@@ -91,7 +51,7 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
             try:
                 url_check_list = list(map(lambda u: u.format(link_insert), url_empty_check_list))
                 url = url_check_list[0]
-                print(url)
+                #print(url)
                 resp = requests.get(url, headers=headers).text
                 dfs = pd.read_html(resp)
                 for d in dfs:
@@ -118,7 +78,7 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
     link_insert = ticker
     link_insert_options_wsj = ['XE/XETR/' + ticker, 'LU/XLUX/' + ticker]
     link_insert_options_yahoo = [ticker + '.DE']
-    validation_wsj = ['All values USD', 'All values EUR', 'All values HKD']
+    validation_wsj = ['All values USD', 'All values EUR', 'All values HKD', 'All values JPY']
     validation_yahoo = ['Date']
 
     url_check_list_wsj = validate_url_list(url_empty_check_list_wsj, link_insert, link_insert_options_wsj,
@@ -216,6 +176,22 @@ def convert_thousands_to_millions(df, num):
         df.loc[mask, periods_cols] = df.loc[mask, periods_cols].applymap(lambda x: x / 1000)
         df = rename_thousands_to_millions(df, ind_col)
         return df
+
+
+def get_financial_statement_currency(num, df, ticker):
+    fs_currency = None
+    main_caption = df.columns[1]
+    if ' USD ' in main_caption:
+        fs_currency = 'USD'
+    elif ' EUR ' in main_caption:
+        fs_currency = 'EUR'
+    elif ' HKD ' in main_caption:
+        fs_currency = 'HKD'
+    elif ' JPY ' in main_caption:
+        fs_currency = 'JPY'
+    else:
+        print(f'{ticker} has unprecedented value! (update - 377)')
+    return fs_currency
 
 
 def update(ticker, ticker_tables):
@@ -343,7 +319,7 @@ def update(ticker, ticker_tables):
                 try_time = try_end_time - try_start_time
                 if try_time > 60:
                     unsuccessful = ticker
-                    print('For {0} {1} was not downloaded'.format(ticker, url))
+                    print(f'For {ticker} {url} was not downloaded')
                     return None
             else:
                 data_downloaded = True
@@ -352,7 +328,8 @@ def update(ticker, ticker_tables):
             for d in df:
                 if d.columns[0] in ['All values USD Thousands.', 'All values USD Millions.',
                                     'All values EUR Thousands.', 'All values EUR Millions.',
-                                    'All values HKD Thousands.', 'All values HKD Millions.']:
+                                    'All values HKD Thousands.', 'All values HKD Millions.',
+                                    'All values JPY Thousands.', 'All values JPY Millions.']:
                     df = d
         else:
             df = df[0]
@@ -363,6 +340,8 @@ def update(ticker, ticker_tables):
         df = df_first_column.join(df_rest_reversed)
         df.reset_index(drop=True, inplace=True)
         df.reset_index(inplace=True)
+        if num == 1:  # income_statement_q
+            fs_currency = get_financial_statement_currency(num, df, ticker)
 
         # sprawdzenie zgodnosci pozycji
         if check_positions(ticker, url, positions_dic, num, df) is False:
@@ -417,16 +396,16 @@ def update(ticker, ticker_tables):
         num += 1
     wsj_conn.close()
 
-    # profile
-    update_profile(ticker, url_check_list)
-
     # price_history
-    update_price(ticker)
+    price_currency = update_price(ticker)
+
+    # profile
+    update_profile(ticker, url_check_list, fs_currency, price_currency)
 
     print(ticker + ' updated')
 
 
-def update_profile(ticker, url_check_list):
+def update_profile(ticker, url_check_list, fs_currency, price_currency):
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
     ticker_profile = ticker + '_profile'
@@ -442,8 +421,12 @@ def update_profile(ticker, url_check_list):
             pass
         else:
             data_downloaded = True
-    profile_df = pd.DataFrame([[profile_data[1].text, profile_data[3].text, profile_data[5].text[1:4]]],
-                              columns=['Sector', 'Industry', 'Fiscal Year Ends'])
+
+    sector = profile_data[1].text[1:-1]  # [1:-1] deletes spaces at beginning and ending
+    industry = profile_data[3].text[1:-1]
+    fiscal_year_ends = ' '.join(profile_data[5].text.split(' ')[1:3])  # text returns ' December 31 Download Reports '
+    profile_df = pd.DataFrame([[sector, industry, fiscal_year_ends, fs_currency, price_currency]],
+                              columns=['Sector', 'Industry', 'Fiscal Year Ends', 'FS_Currency', 'Price_Currency'])
     profile_df.to_sql(ticker_profile, con=engine, if_exists='replace', index=False)
     wsj_conn.close()
 
@@ -461,6 +444,51 @@ class UpdatePriceIndex:
         return index_value
 
 
+def download_and_prepare_price_history(ticker, frequency):
+    global unsuccessful
+    data_downloaded = False
+    start_time = time.time()
+    while data_downloaded is False:
+        try:
+            end_time = time.time()
+            if end_time - start_time > 120:
+                print('download_and_prepare_price_history over 120s')
+            df = pd.DataFrame()
+            tic = yf.Ticker(ticker)
+            df = tic.history(period='max', interval=frequency)
+            price_currency = tic.info['currency']
+
+        except:
+            pass
+        else:
+            data_downloaded = True
+    if df.empty:
+        unsuccessful = ticker
+        print('{0} is not valid for yfinance'.format(ticker))
+        return None
+    if 'Date' not in df.columns:
+        #df['Date'] = df.index
+        df = df.reset_index()
+    if yf_price_data_timeliness(df) is False:
+        pass
+        #download data from other source
+
+    if frequency == '1mo':
+        df.sort_values('Date', ascending=False, inplace=True)
+        df.drop(index=df.index[0], axis=0, inplace=True)
+    df.reset_index(drop=False, inplace=True)
+    df['Date'] = df['Date'].apply(lambda x: str(dt.datetime.strptime(str(x)[:-6], '%Y-%m-%d %H:%M:%S').date()))
+    #df['Date'] = df['Date'].apply(lambda x: str(x)[:10])
+    df.dropna(inplace=True)
+    #for col in df.columns:
+    #    for r in df.index:
+    #        if df[col].iloc[r] == np.nan or df[col].iloc[r] == None or df[col].iloc[r] == 'NULL':
+    #            df.drop(labels=r, axis=0, inplace=True)
+    df.sort_values('Date', ascending=False, inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    return df, price_currency
+
+
 def update_price(ticker):
 
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
@@ -470,7 +498,7 @@ def update_price(ticker):
     frequencies = ['1d']
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
-        price_df_url = download_and_prepare_price_history(ticker, frequency)
+        price_df_url, price_currency = download_and_prepare_price_history(ticker, frequency)
         if price_df_url is not None:
             if check_if_tables_exists(ticker_price_history, sql_table_list):
                 sql_select_all = 'SELECT * FROM [{0}]'.format(ticker_price_history)
@@ -496,7 +524,8 @@ def update_price(ticker):
                         cursor.execute(sql_insert)
                         cursor.commit()
             else:
-                price_df = download_and_prepare_price_history(ticker, frequency)
+                price_df, price_currency = download_and_prepare_price_history(ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)
+    return price_currency
 
     wsj_conn.close()

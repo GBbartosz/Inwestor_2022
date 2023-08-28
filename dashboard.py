@@ -878,6 +878,7 @@ def dashboard():
                 myformat = Format(precision=2, scheme=Scheme.fixed)
             return myformat
 
+        print(total_df[total_df['Ticker'] == 'STLA']['Industry'])
         total_df_dict = total_df.to_dict('records')
 
         total_table_layout = dash.html.Div([

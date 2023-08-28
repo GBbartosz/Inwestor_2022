@@ -200,6 +200,44 @@ def indicator_assessment(df):
                 else:
                     grade.bad()
 
+    def evaluate_roe():
+        # stopa zwrotu z kapitalu wlasnego
+        # w %
+        # efektywnosc w generownaiu zyskow
+        # okreslenie czy wskaznik jest dobry czy zly zalezy od spolek porownywalnych
+        # porwnywanie do sredniej dla spolek z sektora
+        # poziom 15% czyli średnia S&P500 jest akceptowalny
+        # ujemny lub bardzo wysoki ROE (ujemny dochod i kapital wlasny) to sygnal ostrzegawczy
+        # maloprawdopodobne ale ujemny roe moze wynikac z progrmau wykupu akcji wlasnych oraz doskonalego zarzadzania
+        # roznica pomiecy ROA i ROE to zadłużenie
+        # zadłużenie podwyższa ROE poprzez obniżenie Total Equity
+        if col == 'ROE':
+            ind_ass.reset_ress()
+            if ind_ass.is_equal_to(ind_ass.sector_max_val) or ind_ass.is_equal_to(ind_ass.industry_max_val):
+                grade.best()
+            elif ind_ass.is_greater_than(ind_ass.sector_avg_val) or ind_ass.is_greater_than(ind_ass.industry_avg_val):
+                grade.vgood()
+            elif ind_ass.is_greater_than(0.15):
+                grade.good()
+            else:
+                grade.bad()
+
+    def evaluate_roc():
+        # Joel Greenblatt
+        # zwrot z kapitału
+        # ponad 10% dobrze
+        # najważniejsze porównanie do konkurencji
+        if col == 'ROC':
+            ind_ass.reset_ress()
+            if ind_ass.is_equal_to(ind_ass.sector_max_val) or ind_ass.is_equal_to(ind_ass.industry_max_val):
+                grade.best()
+            elif ind_ass.is_greater_than(ind_ass.sector_avg_val) or ind_ass.is_greater_than(ind_ass.industry_avg_val):
+                grade.vgood()
+            elif ind_ass.is_greater_than(0.1):
+                grade.good()
+            else:
+                grade.bad()
+
     def evaluate_debt_to_equity_ratio():
         # poniżej 1 - dobry
         # powyżej 2,5 ryzykowny
@@ -301,6 +339,17 @@ def indicator_assessment(df):
                 else:
                     grade.bad()
 
+    def evaluate_peg():
+        # Lynch
+        # ponizej 1 dobrze
+        if col == 'PEG':
+            ind_ass.reset_ress()
+            if ind_ass.is_less_than(1):
+                grade.vgood()
+            else:
+                grade.bad()
+
+
     ind_ass = IndicatorAssessment(df)
     grade = Grade(ind_ass.total_df['Ticker'].values.tolist())
 
@@ -323,6 +372,8 @@ def indicator_assessment(df):
 
             if grade_if_is_nan(ind_ass, grade) is False:  # puts white color in cells with none
                 evaluate_roa()
+                evaluate_roe()
+                evaluate_roc()
                 evaluate_debt_to_equity_ratio()
                 evaluate_total_debt_to_total_assets_ratio()
                 evaluate_beneish_m_score()

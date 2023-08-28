@@ -21,8 +21,43 @@ class IndicatorCalculation:
         self.df = None
         self.period_indicators_values_l = None
         self.period_price_indicators_values_l = None
-        self.noprice_indicators = ['Revenue', 'Gross Income', 'EBIT', 'EBITDA', 'NOPAT', 'Net Income', 'Research and Development', 'Total Debt', 'ROE', 'Retained Earnings', 'Stopa wzrostu', 'ROA', 'ROC', 'ROCE', 'ROIC', 'Gross Margins', 'EBITDA Margin', 'EBIT Margin', 'Net Margin', 'Debt to Equity Ratio', 'Total Debt to Total Assets Ratio', 'CAPEX to Revenue Ratio', 'Beneish M Score', 'Current Ratio', 'EPS', 'Debt Service Coverage Ratio', 'Cash Ratio', 'Operating Cash Flow Debt Ratio']
-        self.price_indicators = ['Price', 'P/S', 'Altman Z Score', 'P/E', 'PEG', 'Market Capitalization']
+        self.noprice_indicators = ['Revenue',
+                                   'Gross Income',
+                                   'EBIT',
+                                   'EBITDA',
+                                   'NOPAT',
+                                   'Net Income',
+                                   'Research and Development',
+                                   'Total Debt',
+                                   'ROE',
+                                   'Retained Earnings',
+                                   'Stopa wzrostu',
+                                   'ROA',
+                                   'ROC',
+                                   'ROCE',
+                                   'ROIC',
+                                   'Gross Margins',
+                                   'EBITDA Margin',
+                                   'EBIT Margin',
+                                   'Net Margin',
+                                   'Debt to Equity Ratio',
+                                   'Total Debt to Total Assets Ratio',
+                                   'CAPEX to Revenue Ratio',
+                                   'Beneish M Score',
+                                   'Current Ratio',
+                                   'EPS',
+                                   'Debt Service Coverage Ratio',
+                                   'Cash Ratio',
+                                   'Operating Cash Flow Debt Ratio',
+                                   'Basic Shares Outstanding',
+                                   'Capital Employed']
+
+        self.price_indicators = ['Price',
+                                 'P/S',
+                                 'Altman Z Score',
+                                 'P/E',
+                                 'PEG',
+                                 'Market Capitalization']
 
     def __get_table_type_name(self):
         return f'{self.price_subperiod}_{self.price_val_type}_{self.price_summarization}'
@@ -96,6 +131,8 @@ class IndicatorCalculation:
         # poziom 15% czyli średnia S&P500 jest akceptowalny
         # ujemny lub bardzo wysoki ROE (ujemny dochod i kapital wlasny) to sygnal ostrzegawczy
         # maloprawdopodobne ale ujemny roe moze wynikac z progrmau wykupu akcji wlasnych oraz doskonalego zarzadzania
+        # roznica pomiecy ROA i ROE to zadłużenie
+        # zadłużenie podwyższa ROE poprzez obniżenie Total Equity
         net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
         total_equity = self.finsts.blq.Total_Equity.val(self.period_real)
         res = net_income / total_equity
@@ -190,7 +227,10 @@ class IndicatorCalculation:
 
     @__null_handler_no_price_indicators
     def calc_roc(self):
+        # Joel Greenblatt
         # zwrot z kapitału
+        # ponad 10% dobrze
+        # najważniejsze porównanie do konkurencji
         ebit = self.ebit()
         total_equity = self.finsts.blq.Total_Equity.val(self.period_real)
         res = ebit / total_equity
@@ -369,6 +409,19 @@ class IndicatorCalculation:
         res = net_operating_cash_flow / (short_term_debt + long_term_debt)
         return res
 
+    @__null_handler_no_price_indicators
+    def calc_basic_shares_outstanding(self):
+        res = self.finsts.isq.Basic_Shares_Outstanding.val(self.period_real)
+        return res
+
+    @__null_handler_no_price_indicators
+    def calc_capital_employed(self):
+        total_assets = self.finsts.baq.Total_Assets.val(self.period_real)
+        total_current_liabilities = self.finsts.blq.Total_Current_Liabilities.val(self.period_real)
+        res = (total_assets - total_current_liabilities)
+        return res
+
+
 
 
     # price indicators
@@ -420,6 +473,8 @@ class IndicatorCalculation:
 
     @__null_handler_price_indicators
     def calc_peg(self):
+        # Lynch
+        # ponizej 1 dobrze
         eps_basic_growth = self.finsts.isq.EPS_Basic_Growth.val(self.period_real) / self.finsts.isq.EPS_Basic_Growth.val_prev_year(self.period_real)
         res = (self.pv / self.eps()) / eps_basic_growth / 100
         return res
@@ -465,6 +520,8 @@ class IndicatorCalculation:
             self.calc_debt_service_coverage_ratio()
             self.calc_cash_ratio()
             self.calc_operating_cash_flow_debt_ratio()
+            self.calc_basic_shares_outstanding()
+            self.calc_capital_employed()
 
             self.df[period_real] = self.period_indicators_values_l
         table_type_name = 'no_price'

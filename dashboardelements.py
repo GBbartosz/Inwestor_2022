@@ -189,3 +189,27 @@ def get_indicator_comparison_filters_elements_l(indicators_dd_l, split_dd_l, sec
                                  'height': '80px'})
     ]
     return indicator_comparison_filters_elements_l
+
+
+def fs_currency_checklist():
+    ele = dash.dcc.Checklist(id='fs_currency_checklist',
+                             options=['USD',
+                                      'EUR',
+                                      'HKD',
+                                      'JPY'],
+                             value=['USD', 'EUR', 'HKD', 'JPY'],
+                             inline=True)
+
+    return ele
+
+
+def p_currency_checklist():
+    ele = dash.dcc.Checklist(id='p_currency_checklist',
+                             options=['USD',
+                                      'EUR',
+                                      'HKD',
+                                      'JPY'],
+                             value=['USD', 'EUR', 'HKD', 'JPY'],
+                             inline=True)
+
+    return ele

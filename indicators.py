@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import math
 
@@ -432,6 +433,13 @@ class IndicatorCalculation:
         return res
 
     @__null_handler_price_indicators
+    def calc_avg_1y_price(self):
+        price_df = self.price.price_df.copy()
+        one_year_ago = self.period_real - datetime.timedelta(days=365)
+        res = price_df[(price_df['Date'] > one_year_ago) & (price_df['Date'] <= self.period_real)]['Close'].avg()
+        return res
+
+    @__null_handler_price_indicators
     def calc_p_s_ratio(self):
         # przydatny w wycenie akcji wzrostowych, które nie przyniosły jeszcze zysku lub doświadczyły tymczasowego niepowodzenia
         # przychód jest tylko wtedy wartościowy gdy w pewnym momencie można go przełożyć na zyski
@@ -475,8 +483,15 @@ class IndicatorCalculation:
     def calc_peg(self):
         # Lynch
         # ponizej 1 dobrze
-        eps_basic_growth = self.finsts.isq.EPS_Basic_Growth.val(self.period_real) / self.finsts.isq.EPS_Basic_Growth.val_prev_year(self.period_real)
-        res = (self.pv / self.eps()) / eps_basic_growth / 100
+        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        prev_net_income = self.finsts.isq.Net_Income.previous_year_quarter_year_val(self.period_real)
+        diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
+        net_income_growth = net_income / prev_net_income - 1
+        p_e_ratio = self.pv * diluted_shares_outstanding / net_income
+        res = p_e_ratio / net_income_growth
+
+        #eps_basic_growth = self.finsts.isq.EPS_Basic_Growth.val(self.period_real) / self.finsts.isq.EPS_Basic_Growth.val_prev_year(self.period_real)
+        #res = (self.pv / self.eps()) / eps_basic_growth / 100
         return res
 
     @__null_handler_price_indicators

@@ -1,4 +1,3 @@
-import pandas as pd
 import utilities as u
 import warnings
 
@@ -64,6 +63,7 @@ def analyse(ticker_name):
                 table_type_names.append(table_type_name)
 
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
+    print(f'{ticker_name} analysed')
 
 #warnings.filterwarnings('ignore')
 #analyse('DIS')
@@ -74,6 +74,7 @@ def analyse(ticker_name):
 #analyse('BABA')
 #analyse('ANET')
 #analyse('NKE')
+#analyse('VOW')
 
 
 #drop tabeli price rozwiazuje prol=blem

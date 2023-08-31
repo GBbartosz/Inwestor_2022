@@ -78,6 +78,8 @@ class IndcompFilters:
         self.price_val_type = dd_chosen_price.val_type
         self.price_summarization = dd_chosen_price.summarization
         self.highlight_ticker = []
+        self.fs_currencies = ['USD', 'EUR', 'HKD', 'JPY']
+        self.p_currencies = ['USD', 'EUR', 'HKD', 'JPY']
 
 
 class IiFilters:
@@ -301,7 +303,7 @@ def ticker_indicator_period_update(dd_chosen_ticker, dd_chosen_indicator, dd_cho
             tic.create_indicators()
             ddchosen_obj_tic.assign_color_to_ticker(t)
             color = getattr(ddchosen_obj_tic, t + '_color')
-            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, tic.fs_currency, tic.price_currency)
+            get_indicators_add_trace(main_chart_fig, ddchosen_obj_ind, tic, color, tic.fs_currency, tic.p_currency)
 
     layout = go.Layout(
         margin=go.layout.Margin(
@@ -348,6 +350,8 @@ def create_indcomp_fig():
     sector = indcomp_filters.sector
     chosen_tickers = indcomp_filters.chosen_tickers
     highlight_ticker = indcomp_filters.highlight_ticker
+    fs_currecies = indcomp_filters.fs_currencies
+    p_currencies = indcomp_filters.p_currencies
 
     indall = IndicatorAll(tickers_list, chosen_tickers, chosen_indicator, industry, sector, dd_chosen_price,
                           wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
@@ -368,7 +372,10 @@ def create_indcomp_fig():
         colors = indall.assign_colors(split_vals)
         indcomp_fig = go.Figure()
         split_vals_legend = []
-        for x, y, split_val, color, tic, sector, industry, fs_currency, price_currency in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries(), indall.get_fs_currencies(), indall.get_price_currencies()):
+        for x, y, split_val, color, tic, sector, industry, fs_currency, price_currency in zip(xs, ys, split_vals, colors, indall.filtered_tickers_l, indall.get_sectors(), indall.get_industries(), indall.get_fs_currencies(), indall.get_p_currencies()):
+
+            if fs_currency not in fs_currecies or price_currency not in p_currencies:  # skip if currency omitted in currency checklists
+                continue
 
             if split_val in split_vals_legend:  # show only distinct values in legend
                 show_legend = False
@@ -688,7 +695,18 @@ def dashboard():
         indcomp_title = dash.html.H1(id='h1_indicator',
                                      children='Indicators',
                                      style={'font-size': '20px',
-                                            'text-align': 'center'})
+                                            'text-align': 'center',
+                                            'line-height': '2px'})
+
+        fs_checkbox_title = dash.html.H1(id='fs_checkbox_title',
+                                         children='FS',
+                                         style={'font-size': '16px',
+                                                'line-height': '2px'})
+
+        p_checkbox_title = dash.html.H1(id='p_checkbox_title',
+                                        children='P',
+                                        style={'font-size': '16px',
+                                               'line-height': '2px'})
 
         indcomp_chart = dash.dcc.Graph(id='indcomp_chart',
                                        figure=go.Figure(),
@@ -696,17 +714,25 @@ def dashboard():
 
         layout_indicator_comparison_page = dash.html.Div([
             dash.html.Div([
-                dash.html.Div([indcomp_title], style={'display': 'inline-block',
-                                                      'textAlign': 'left',
-                                                      'height': '3vh',
-                                                      'width': '20vh'}),
+                dash.html.Div([dash.html.Div([indcomp_title], style={'display': 'inline-block', 'margin-left': '50px', 'margin-right': '140px', 'margin-top': '0px'}),
+                               dash.html.Div([dash.html.Div([fs_checkbox_title], style={'display': 'inline-block', 'margin-left': '10px', 'margin-right': '6px', 'margin-top': '0px'}),
+                                              dash.html.Div([dashele.fs_currency_checklist()], style={'display': 'inline-block', 'margin-right': '20px', 'margin-top': '0px'}),
+                                              dash.html.Div([p_checkbox_title], style={'display': 'inline-block', 'margin-right': '6px', 'margin-top': '0px'}),
+                                              dash.html.Div([dashele.p_currency_checklist()], style={'display': 'inline-block', 'margin-right': '6px', 'margin-top': '0px'})],
+                                             style={'display': 'inline-block', 'padding': '3px 3px', 'border': '2px blue solid', 'border-radius': '10px'})
+                               ], style={'display': 'inline-block',
+                                         'textAlign': 'left',
+                                         'margin-top': '0px'
+                                         #'height': '3vh',
+                                         #'width': '20vh'
+                                         }),
                 dash.html.Div([
                     dash.html.Div([dashblinks.link_main()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_indicators_intersection()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div([dashblinks.link_data_table()], style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'}),
                     dash.html.Div(dashblinks.link_score(), style={'display': 'inline-block', 'margin': '0', 'padding': '0px 2px'})
                     ], style={'display': 'inline-block', 'textAlign': 'right'})
-                ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin': '0', 'padding': '0hv'}),
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'height': '4vh', 'margin-top': '0px', 'padding': '0hv'}),
             dash.html.Div([
                 dash.html.Div([dash.html.Div(indcomp_ind_dd),
                                dash.html.Div(indcomp_split_dd),
@@ -723,6 +749,26 @@ def dashboard():
         ])
 
         dash.register_page('indcomp', path='/indcomp', layout=layout_indicator_comparison_page)
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            [dash.Input('fs_currency_checklist', 'value')],
+            prevent_initial_call=True
+        )
+        def checklist_selection_of_fs_currency(fs_currencies):
+            indcomp_filters.fs_currencies = fs_currencies
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
+
+        @app.callback(
+            dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
+            [dash.Input('p_currency_checklist', 'value')],
+            prevent_initial_call=True
+        )
+        def checklist_selection_of_fs_currency(p_currencies):
+            indcomp_filters.p_currencies = p_currencies
+            indcomp_fig, indall = create_indcomp_fig()
+            return indcomp_fig
 
         @app.callback(
             dash.Output(component_id='indcomp_chart', component_property='figure', allow_duplicate=True),
@@ -1183,6 +1229,7 @@ if __name__ == '__main__':
     tickers_l_csv = tickers_l_csv[tickers_l_csv['valid'] == 1]['ticker'].tolist()
 
     tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
+    print("Number of duplicated tickers ", len(tickers_list) - len(set(tickers_list)))
     #tickers_list = ['META', 'AAPL', 'GOOGL']
     fin_st_tickers_dropdown_l = []
 

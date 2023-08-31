@@ -436,7 +436,7 @@ class Indicator(object):
             while i < self.periods_to_full_year * 2:
                 if i >= self.periods_to_full_year:
                     prev_year_sum += getattr(self, period)  # add value from period
-                    period = self.__get_previous_quarter(period)  # get previous period
+                period = self.__get_previous_quarter(period)  # get previous period
                 i += 1
         else:
             prev_year_sum = None

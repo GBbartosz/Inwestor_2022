@@ -13,6 +13,13 @@ import utilities as u
 unsuccessful = None
 
 
+def wsj_yf_ticker_dict():
+    wsj_yf_tic_dict = {'BMW': 'BMW.DE',
+                       'VOW': 'VOW.DE',
+                       'P911': 'P911.DE'}
+    return wsj_yf_tic_dict
+
+
 def check_if_tables_exists(table, sql_table_list):
     if table in sql_table_list:
         return True
@@ -198,6 +205,12 @@ def update(ticker, ticker_tables):
     global unsuccessful
     unsuccessful = None
 
+    wsj_yf_tic_dict = wsj_yf_ticker_dict()
+    if ticker in wsj_yf_tic_dict.keys():
+        yf_ticker = wsj_yf_tic_dict[ticker]
+    else:
+        yf_ticker = ticker
+
     income_statement_positions = ['Sales/Revenue', 'Sales Growth', 'Cost of Goods Sold (COGS) incl. D&A',
                                   'COGS excluding D&A', 'Depreciation & Amortization Expense', 'Depreciation',
                                   'Amortization of Intangibles', 'Amortization of Deferred Charges', 'COGS Growth',
@@ -306,6 +319,7 @@ def update(ticker, ticker_tables):
         return None
     url_list = url_check_list[0:8]
     num = 0
+    break_me = False
     for url in url_list:
         df = pd.DataFrame()
         data_downloaded = False
@@ -345,6 +359,7 @@ def update(ticker, ticker_tables):
 
         # sprawdzenie zgodnosci pozycji
         if check_positions(ticker, url, positions_dic, num, df) is False:
+            break_me = True
             unsuccessful = ticker
             break
 
@@ -396,13 +411,14 @@ def update(ticker, ticker_tables):
         num += 1
     wsj_conn.close()
 
-    # price_history
-    price_currency = update_price(ticker)
+    if break_me is False:
+        # price_history
+        price_currency = update_price(ticker, yf_ticker)
 
-    # profile
-    update_profile(ticker, url_check_list, fs_currency, price_currency)
+        # profile
+        update_profile(ticker, url_check_list, fs_currency, price_currency)
 
-    print(ticker + ' updated')
+        print(ticker + ' updated')
 
 
 def update_profile(ticker, url_check_list, fs_currency, price_currency):
@@ -444,7 +460,7 @@ class UpdatePriceIndex:
         return index_value
 
 
-def download_and_prepare_price_history(ticker, frequency):
+def download_and_prepare_price_history(ticker, yf_ticker, frequency):
     global unsuccessful
     data_downloaded = False
     start_time = time.time()
@@ -454,10 +470,9 @@ def download_and_prepare_price_history(ticker, frequency):
             if end_time - start_time > 120:
                 print('download_and_prepare_price_history over 120s')
             df = pd.DataFrame()
-            tic = yf.Ticker(ticker)
+            tic = yf.Ticker(yf_ticker)
             df = tic.history(period='max', interval=frequency)
             price_currency = tic.info['currency']
-
         except:
             pass
         else:
@@ -489,7 +504,7 @@ def download_and_prepare_price_history(ticker, frequency):
     return df, price_currency
 
 
-def update_price(ticker):
+def update_price(ticker, yf_ticker):
 
     cursor, wsj_conn, engine = u.create_sql_connection('wsj')
 
@@ -498,7 +513,7 @@ def update_price(ticker):
     frequencies = ['1d']
     for frequency in frequencies:
         ticker_price_history = ticker + '_price_history_' + frequency
-        price_df_url, price_currency = download_and_prepare_price_history(ticker, frequency)
+        price_df_url, price_currency = download_and_prepare_price_history(ticker, yf_ticker, frequency)
         if price_df_url is not None:
             if check_if_tables_exists(ticker_price_history, sql_table_list):
                 sql_select_all = 'SELECT * FROM [{0}]'.format(ticker_price_history)
@@ -524,7 +539,7 @@ def update_price(ticker):
                         cursor.execute(sql_insert)
                         cursor.commit()
             else:
-                price_df, price_currency = download_and_prepare_price_history(ticker, frequency)
+                price_df, price_currency = download_and_prepare_price_history(ticker, yf_ticker, frequency)
                 price_df.to_sql(ticker_price_history, con=engine, if_exists='replace', index=False)
     return price_currency
 

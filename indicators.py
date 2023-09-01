@@ -7,6 +7,9 @@ import math
 # add function to update_indicators_without_price or update_indicators_with_price
 
 
+#Revenue 1y, 2y 3y 5y growth
+
+
 class IndicatorCalculation:
     def __init__(self, finsts, price, price_subperiod, price_val_type, price_summarization, periods_real):
         self.finsts = finsts

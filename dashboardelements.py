@@ -191,6 +191,22 @@ def get_indicator_comparison_filters_elements_l(indicators_dd_l, split_dd_l, sec
     return indicator_comparison_filters_elements_l
 
 
+def fs_checkbox_title():
+    ele = dash.html.H1(id='fs_checkbox_title',
+                       children='FS',
+                       style={'font-size': '16px',
+                              'line-height': '2px'})
+    return ele
+
+
+def p_checkbox_title():
+    ele = dash.html.H1(id='p_checkbox_title',
+                       children='P',
+                       style={'font-size': '16px',
+                              'line-height': '2px'})
+    return ele
+
+
 def fs_currency_checklist():
     ele = dash.dcc.Checklist(id='fs_currency_checklist',
                              options=['USD',

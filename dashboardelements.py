@@ -121,7 +121,8 @@ def data_table_button_style():
 
 ###   ###
 
-def dropdown_ele(id, options, placeholder, multi, width, height):
+
+def dropdown_ele(id, options, placeholder, multi, width, height, disabled=False):
     if multi:
         style = indcomp_multi_dropdown_style(width, height)
     else:
@@ -131,7 +132,8 @@ def dropdown_ele(id, options, placeholder, multi, width, height):
                             options=options,
                             placeholder=placeholder,
                             multi=multi,
-                            style=style)
+                            style=style,
+                            disabled=disabled)
     return ele
 
 

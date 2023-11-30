@@ -15,7 +15,8 @@ class Price:
             return end_date
 
         self.subperiods = ['day', 'week', 'month', 'quarter']
-        self.val_types = ['High', 'Low', 'Open', 'Close']
+        # self.val_types = ['High', 'Low', 'Open', 'Close']
+        self.val_types = ['Close'] # redukcja val types
         self.summarizations = ['max', 'min', 'open', 'close']
         self.ticker_name = ticker_name
         self.wsj_cursor, self.wsj_conn, self.wsj_engine = u.create_sql_connection('wsj')

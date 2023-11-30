@@ -1,11 +1,11 @@
 import dash
 
+from collections import Counter
 from dash.dash_table.Format import Format, Scheme
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import subprocess
 import time
 import warnings
 
@@ -16,7 +16,7 @@ import dashboardelements as dashele
 import indicatorassessment
 import utilities as u
 
-from indicatorall import IndicatorAll, get_all_indicators
+from indicatorall import IndicatorAll, get_all_indicators, TicBranches
 from tickerclass import Ticker
 
 
@@ -84,16 +84,27 @@ class IndcompFilters:
 
 class IiFilters:
     def __init__(self):
-        global tickers_list
+        global tickers_list, wsj_cursor
         self.x_indicator = None
         self.y_indicator = None
         self.tickers = tickers_list
+        self.chosen_tickers = []
         self.industry = []
         self.sector = []
         self.split_type = 'companies'
         self.dd_chosen_price = ChoiceForPrice()
         self.fs_currencies = ['USD', 'EUR', 'HKD', 'JPY']
         self.p_currencies = ['USD', 'EUR', 'HKD', 'JPY']
+
+        self.all_industries = set()
+        self.all_sectors = set()
+        self.tic_branches = TicBranches(tickers_list, wsj_cursor)
+        for tic in self.tickers:
+            tic_industry = getattr(self.tic_branches, tic).industry
+            tic_sector = getattr(self.tic_branches, tic).sector
+            self.all_industries.add(tic_industry)
+            self.all_sectors.add(tic_sector)
+
 
 
 class DDChosen:
@@ -426,7 +437,8 @@ def all_options_for_dropdowns(tickers_list):
     tickers_dropdown_l = options_for_dropdown(tickers_list)
     indicators_dd_l = options_for_dropdown(tic.indicators_names_l)
     price_period_type_dd_l = options_for_dropdown(['day', 'week', 'month', 'quarter'])
-    price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+    # price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+    price_val_type_dd_l = options_for_dropdown(['Close'])  # redukcja val type
     price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
     return tickers_dropdown_l, indicators_dd_l, price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
 
@@ -678,7 +690,8 @@ def dashboard():
             industries_dd_l = options_for_dropdown(indall.filtered_industries)
             split_dd_l = options_for_dropdown(['companies', 'sectors', 'industries'])
             price_period_type_dd_l = options_for_dropdown(['day', 'week', 'month', 'quarter'])
-            price_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+            # rice_val_type_dd_l = options_for_dropdown(['High', 'Low', 'Open', 'Close'])
+            price_val_type_dd_l = options_for_dropdown(['Close']) # redukcja val type
             price_summarization_dd_l = options_for_dropdown(['max', 'min', 'open', 'close'])
             return indicators_dd_l, indcomp_chosen_tickers_dd_l, tickers_highlight_dd_l, sectors_dd_l, industries_dd_l, split_dd_l, \
                 price_period_type_dd_l, price_val_type_dd_l, price_summarization_dd_l
@@ -977,17 +990,26 @@ def dashboard():
 
         def create_ii_fig():
             global ii_filters, wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine
+            print('create_ii_fig')
+            print(ii_filters.x_indicator)
+            print(ii_filters.y_indicator)
+            print(ii_filters.industry)
+            print(ii_filters.sector)
+            print(ii_filters.tickers)
+            print(ii_filters.chosen_tickers)
+            print()
 
             # selecting both indicators is necessary to proceed
             if ii_filters.x_indicator is None or ii_filters.y_indicator is None or (len(ii_filters.industry) == 0 and len(ii_filters.sector) == 0):
+                print('empy fig')
                 ii_fig = go.Figure()
                 return ii_fig, None, None
 
-            x_ind = IndicatorAll(ii_filters.tickers, [], ii_filters.x_indicator, ii_filters.industry, ii_filters.sector,
+            x_ind = IndicatorAll(ii_filters.tickers, ii_filters.chosen_tickers, ii_filters.x_indicator, ii_filters.industry, ii_filters.sector,
                                  ii_filters.dd_chosen_price,
                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
             xs = [x[-1] for x in x_ind.get_ys()]
-            y_ind = IndicatorAll(ii_filters.tickers, [], ii_filters.y_indicator, ii_filters.industry, ii_filters.sector,
+            y_ind = IndicatorAll(ii_filters.tickers, ii_filters.chosen_tickers, ii_filters.y_indicator, ii_filters.industry, ii_filters.sector,
                                  ii_filters.dd_chosen_price,
                                  wsj_cursor, wsj_conn, wsj_engine, wsja2_cursor, wsja2_conn, wsja2_engine)
             ys = [y[-1] for y in y_ind.get_ys()]
@@ -1060,14 +1082,15 @@ def dashboard():
                                  xaxis_title=ii_filters.x_indicator,
                                  yaxis_title=ii_filters.y_indicator)
 
+            print(x_ind.indicator)
             return ii_fig, x_ind, y_ind
 
         indicators_dd_l, tickers_dd_l, sectors_dd_l, industries_dd_l, split_dd_l = initial_options_for_dropdowns_ii()
         ii_ind_dd_x = dashele.dropdown_ele('ii_ind_dd_x', indicators_dd_l, 'Select first indicator', False, '20vh', '4vh')
         ii_ind_dd_y = dashele.dropdown_ele('ii_ind_dd_y', indicators_dd_l, 'Select second indicator', False, '20vh', '4vh')
-        ii_ticker_dd = dashele.dropdown_ele('ii_ticker_dd', tickers_dd_l, 'Select ticker', True, '20vh', '23vh')
-        ii_sector_dd = dashele.dropdown_ele('ii_sector_dd', sectors_dd_l, 'Select sector', True, '20vh', '23vh')
-        ii_industry_dd = dashele.dropdown_ele('ii_industry_dd', industries_dd_l, 'Select industry', True, '20vh', '23vh')
+        ii_ticker_dd = dashele.dropdown_ele('ii_ticker_dd', tickers_dd_l, 'Select ticker', True, '20vh', '23vh', disabled=True)
+        ii_sector_dd = dashele.dropdown_ele('ii_sector_dd', sectors_dd_l, 'Select sector', True, '20vh', '23vh', disabled=True)
+        ii_industry_dd = dashele.dropdown_ele('ii_industry_dd', industries_dd_l, 'Select industry', True, '20vh', '23vh', disabled=True)
         ii_split_dd = dashele.dropdown_ele('ii_split_dd', split_dd_l, 'Select split option', False, '20vh', '4vh')
         ii_fs_checkbox_title = dashele.fs_checkbox_title()
         ii_p_checkbox_title = dashele.p_checkbox_title()
@@ -1138,6 +1161,9 @@ def dashboard():
 
         @app.callback(
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Output(component_id='ii_sector_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_industry_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_ticker_dd', component_property='disabled', allow_duplicate=True),
             dash.Input(component_id='ii_ind_dd_x', component_property='value'),
             prevent_initial_call=True
         )
@@ -1146,10 +1172,18 @@ def dashboard():
 
             ii_filters.x_indicator = chosen_indicator
             ii_fig, x_ind, y_ind = create_ii_fig()
-            return ii_fig
+
+            disabled = True
+            if ii_filters.x_indicator is not None and ii_filters.y_indicator is not None:
+                disabled = False
+
+            return ii_fig, disabled, disabled, disabled
 
         @app.callback(
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
+            dash.Output(component_id='ii_sector_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_industry_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_ticker_dd', component_property='disabled', allow_duplicate=True),
             dash.Input(component_id='ii_ind_dd_y', component_property='value'),
             prevent_initial_call=True
         )
@@ -1158,11 +1192,14 @@ def dashboard():
 
             ii_filters.y_indicator = chosen_indicator
             ii_fig, x_ind, y_ind = create_ii_fig()
-            return ii_fig
+
+            disabled = True
+            if ii_filters.x_indicator is not None and ii_filters.y_indicator is not None:
+                disabled = False
+
+            return ii_fig, disabled, disabled, disabled
 
         @app.callback(
-            dash.Output(component_id='ii_sector_dd', component_property='options', allow_duplicate=True),
-            dash.Output(component_id='ii_industry_dd', component_property='options', allow_duplicate=True),
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
             dash.Input(component_id='ii_ticker_dd', component_property='value'),
             prevent_initial_call=True
@@ -1170,15 +1207,19 @@ def dashboard():
         def dropdown_ticker_selection(chosen_ticker):
             global ii_filters
 
-            ii_filters.tickers = chosen_ticker
+            ii_filters.chosen_tickers = chosen_ticker
+            print()
+            print(dropdown_ticker_selection)
+            print(ii_filters.chosen_tickers)
+            print()
             ii_fig, x_ind, y_ind = create_ii_fig()
-            sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
-            industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
-            return sectors_dd_l, industries_dd_l, ii_fig
+
+            return ii_fig
 
         @app.callback(
             dash.Output(component_id='ii_industry_dd', component_property='options', allow_duplicate=True),
-            dash.Output(component_id='ii_ticker_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_industry_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_sector_dd', component_property='options', allow_duplicate=True),
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
             dash.Input(component_id='ii_sector_dd', component_property='value'),
             prevent_initial_call=True
@@ -1186,15 +1227,26 @@ def dashboard():
         def dropdown_sector_selection(chosen_sector):
             global ii_filters
 
+            disabled = True
             ii_filters.sector = chosen_sector
             ii_fig, x_ind, y_ind = create_ii_fig()
-            industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
-            tickers_dd_l = options_for_dropdown(x_ind.filtered_tickers_l)
-            return industries_dd_l, tickers_dd_l, ii_fig
+            if ii_filters.x_indicator is not None and ii_filters.y_indicator is not None:
+                disabled = False
+
+            if x_ind is None:
+                industries_dd_l = options_for_dropdown(ii_filters.all_industries)
+                sectors_dd_l = options_for_dropdown(ii_filters.all_sectors)
+
+            else:
+                industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
+                sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
+
+            return industries_dd_l, disabled, sectors_dd_l, ii_fig
 
         @app.callback(
             dash.Output(component_id='ii_sector_dd', component_property='options', allow_duplicate=True),
-            dash.Output(component_id='ii_ticker_dd', component_property='options', allow_duplicate=True),
+            dash.Output(component_id='ii_sector_dd', component_property='disabled', allow_duplicate=True),
+            dash.Output(component_id='ii_industry_dd', component_property='options', allow_duplicate=True),
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
             dash.Input(component_id='ii_industry_dd', component_property='value'),
             prevent_initial_call=True
@@ -1202,11 +1254,21 @@ def dashboard():
         def dropdown_industry_selection(chosen_industry):
             global ii_filters
 
+            disabled = True
             ii_filters.industry = chosen_industry
             ii_fig, x_ind, y_ind = create_ii_fig()
-            sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
-            tickers_dd_l = options_for_dropdown(x_ind.filtered_tickers_l)
-            return sectors_dd_l, tickers_dd_l, ii_fig
+            if ii_filters.x_indicator is not None and ii_filters.y_indicator is not None:
+                disabled = False
+
+            if x_ind is None:
+                industries_dd_l = options_for_dropdown(ii_filters.all_industries)
+                sectors_dd_l = options_for_dropdown(ii_filters.all_sectors)
+
+            else:
+                industries_dd_l = options_for_dropdown(x_ind.filtered_industries)
+                sectors_dd_l = options_for_dropdown(x_ind.filtered_sectors)
+
+            return sectors_dd_l, disabled, industries_dd_l, ii_fig
 
         @app.callback(
             dash.Output(component_id='ii_chart', component_property='figure', allow_duplicate=True),
@@ -1290,8 +1352,14 @@ if __name__ == '__main__':
 
     tickers_list = [tic for tic in tickers_l_csv if tic in tickers_l_sql_wsj and tic in tickers_l_sql_wsja2]
     print("Number of duplicated tickers ", len(tickers_list) - len(set(tickers_list)))
+    tic_counter = Counter(tickers_list)
+    duplicated_tickers = [tic for tic, count in tic_counter.items() if count > 1]
+    print(f'Duplicates: {duplicated_tickers}')
     #tickers_list = ['META', 'AAPL', 'GOOGL']
     fin_st_tickers_dropdown_l = []
+
+    wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
+    wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
 
     dd_chosen_ticker = DDChosen('ticker')
     dd_chosen_indicator = DDChosen('indicator')
@@ -1300,8 +1368,6 @@ if __name__ == '__main__':
     ii_filters = IiFilters()
 
     curr_choice_for_fin_st = CurrentChooiceForFinStatement()
-    wsj_cursor, wsj_conn, wsj_engine = u.create_sql_connection('wsj')
-    wsja2_cursor, wsja2_conn, wsja2_engine = u.create_sql_connection('wsja2')
     total_df = get_total_df()
     color_df, score_df = indicatorassessment.indicator_assessment(total_df)
     data_table_unfiltering = DataTableUnfiltering(color_df)

@@ -413,7 +413,7 @@ class Indicator(object):
             res = None
         return res
 
-    def quarter_year_val(self, period):
+    def val_year_4q(self, period):
         # returns sum of last four quarters
         period_pos = self.periods_list.index(period)
         if period_pos >= self.periods_to_full_year - 1:  # checks if 4 periods including present period are available
@@ -427,10 +427,9 @@ class Indicator(object):
             year_sum = None
         return year_sum
 
-    def previous_year_quarter_year_val(self, period):
-        # returns sum from four quarters, 4 quarters ago
+    def calculate_sum_of_4_quarter_years_ago(self, period, years_ago):
         period_pos = self.periods_list.index(period)
-        if period_pos >= self.periods_to_full_year * 2 - 1:  # checks if 8 periods including present period are available
+        if period_pos >= self.periods_to_full_year * (years_ago + 1) - 1:  # checks if 8 periods including present period are available
             i = 0
             prev_year_sum = 0
             while i < self.periods_to_full_year * 2:
@@ -442,6 +441,30 @@ class Indicator(object):
             prev_year_sum = None
         return prev_year_sum
 
+    def val_prev_year_4q(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        val = self.calculate_sum_of_4_quarter_years_ago(period, 1)
+        return val
+
+    def val_prev_2year_4q(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        val = self.calculate_sum_of_4_quarter_years_ago(period, 2)
+        return val
+
+    def val_prev_3year_4q(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        val = self.calculate_sum_of_4_quarter_years_ago(period, 3)
+        return val
+
+    def val_prev_4year_4q(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        val = self.calculate_sum_of_4_quarter_years_ago(period, 4)
+        return val
+
+    def val_prev_5year_4q(self, period):
+        # returns sum from four quarters, 4 quarters ago
+        val = self.calculate_sum_of_4_quarter_years_ago(period, 5)
+        return val
 
 #import time
 #import warnings

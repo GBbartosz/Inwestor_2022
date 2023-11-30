@@ -65,16 +65,11 @@ def analyse(ticker_name):
     create_or_replace_indicators_sql_table(ticker_name, table_type_names, dfs)
     print(f'{ticker_name} analysed')
 
-#warnings.filterwarnings('ignore')
-#analyse('DIS')
-#analyse('META')
-#analyse('AMZN')
-#analyse('NFLX')
-#analyse('GOOGL')
-#analyse('BABA')
-#analyse('ANET')
-#analyse('NKE')
-#analyse('VOW')
+warnings.filterwarnings('ignore')
+#tl = ['PUM']
+#for ticker in tl:
+#    analyse(ticker)
+
 
 
 #drop tabeli price rozwiazuje prol=blem

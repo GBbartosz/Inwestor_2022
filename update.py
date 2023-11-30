@@ -14,7 +14,17 @@ unsuccessful = None
 
 
 def wsj_yf_ticker_dict():
-    wsj_yf_tic_dict = {'BMW': 'BMW.DE',
+    wsj_yf_tic_dict = {'ADS': 'ADS.DE',
+                       'BOSS': 'BOSS.DE',
+                       'BMW': 'BMW.DE',
+                       'CDI': 'CDI.PA',
+                       'DHL': 'DHL.DE',
+                       'EL': 'EL.PA',
+                       'ELN': 'ELN.MI',
+                       'KER': 'KER.PA',
+                       'MONC': 'MONC.MI',
+                       'PUM': 'PUM.DE',
+                       'RMS': 'RMS.PA',
                        'VOW': 'VOW.DE',
                        'P911': 'P911.DE'}
     return wsj_yf_tic_dict
@@ -58,7 +68,6 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
             try:
                 url_check_list = list(map(lambda u: u.format(link_insert), url_empty_check_list))
                 url = url_check_list[0]
-                #print(url)
                 resp = requests.get(url, headers=headers).text
                 dfs = pd.read_html(resp)
                 for d in dfs:
@@ -83,7 +92,10 @@ def validate_urls(url_empty_check_list_wsj, url_empty_check_list_yahoo, ticker):
                                                                 link_insert_options)
 
     link_insert = ticker
-    link_insert_options_wsj = ['XE/XETR/' + ticker, 'LU/XLUX/' + ticker]
+    link_insert_options_wsj = ['XE/XETR/' + ticker,
+                               'LU/XLUX/' + ticker,
+                               'FR/XPAR/' + ticker,
+                               'IT/XMIL/' + ticker]
     link_insert_options_yahoo = [ticker + '.DE']
     validation_wsj = ['All values USD', 'All values EUR', 'All values HKD', 'All values JPY']
     validation_yahoo = ['Date']
@@ -112,6 +124,14 @@ def check_positions(ticker, url, positions_dic, num, df):
 
 def update_sql_table_empty_values(df, sql_df, cursor, table_name):
     common_columns = u.common_member(df.columns, sql_df.columns)
+    #common_rows = u.common_member(df.iloc[:, 1], sql_df.iloc[:, 1])  # solution for error when wsj changes number of indicators (increases or decreases number of rows on wsj webpage)
+    #u.pandas_df_display_options()
+    #print(sql_df.head())
+    #print(df.head())
+    #print(len(common_rows))
+    #print(len(df.iloc[:, 1]))
+    #print(common_rows)
+
     if common_columns:
         for col in common_columns:
             for r in sql_df.index:
@@ -469,6 +489,7 @@ def download_and_prepare_price_history(ticker, yf_ticker, frequency):
             end_time = time.time()
             if end_time - start_time > 120:
                 print('download_and_prepare_price_history over 120s')
+                return None  # ERROR - blad przy imporcie danych przez yfinance
             df = pd.DataFrame()
             tic = yf.Ticker(yf_ticker)
             df = tic.history(period='max', interval=frequency)

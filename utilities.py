@@ -742,10 +742,15 @@ def get_stock_currency(ticker_name, cursor):
 def fixed_tickers_colors():
     mydict = {'AMD': '#000000',
               'AMZN': '#ff9900',
+              'AVGO': '#CC092F',
               'GOOGL': '#34A853',
+              'INTC': '#0068B5',
+              'MCD': '#FFC72C',
               'META': '#0080FB',
               'MSFT': '#FFB900',
-              'NFLX': '#D81F26'
+              'NFLX': '#D81F26',
+              'NVDA': '#76B900',
+              'QCOM': '#3253DC'
     }
     return mydict
 

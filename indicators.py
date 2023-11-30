@@ -9,6 +9,11 @@ import math
 
 #Revenue 1y, 2y 3y 5y growth
 
+### INSTRUCTION ###
+# insert to self.noprice_indicators indicator name 
+# create function
+# add created function to update_indicators_without_price or update_indicators_with_price
+
 
 class IndicatorCalculation:
     def __init__(self, finsts, price, price_subperiod, price_val_type, price_summarization, periods_real):
@@ -54,7 +59,13 @@ class IndicatorCalculation:
                                    'Cash Ratio',
                                    'Operating Cash Flow Debt Ratio',
                                    'Basic Shares Outstanding',
-                                   'Capital Employed']
+                                   'Capital Employed',
+                                   'Revenue 1 year growth',
+                                   'Revenue 2 year growth',
+                                   'Revenue 3 year growth',
+                                   'Net Income 1 year growth',
+                                   'Net Income 2 year growth',
+                                   'Net Income 3 year growth']
 
         self.price_indicators = ['Price',
                                  'P/S',
@@ -105,16 +116,16 @@ class IndicatorCalculation:
 
     @__null_handler
     def ebit(self):
-        revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
-        cogs = self.finsts.isq.Cost_of_Goods_Sold_COGS_incl_D_A.quarter_year_val(self.period_real)
-        operating_expenses = self.finsts.isq.SG_A_Expense.quarter_year_val(self.period_real)
+        revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
+        cogs = self.finsts.isq.Cost_of_Goods_Sold_COGS_incl_D_A.val_year_4q(self.period_real)
+        operating_expenses = self.finsts.isq.SG_A_Expense.val_year_4q(self.period_real)
         res = revenue - cogs - operating_expenses
         return res
 
     @__null_handler
     def nopat(self):
         ebit = self.ebit()
-        income_tax = self.finsts.isq.Income_Tax.quarter_year_val(self.period_real)
+        income_tax = self.finsts.isq.Income_Tax.val_year_4q(self.period_real)
         res = ebit - income_tax
         return res
 
@@ -137,7 +148,7 @@ class IndicatorCalculation:
         # maloprawdopodobne ale ujemny roe moze wynikac z progrmau wykupu akcji wlasnych oraz doskonalego zarzadzania
         # roznica pomiecy ROA i ROE to zadłużenie
         # zadłużenie podwyższa ROE poprzez obniżenie Total Equity
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         total_equity = self.finsts.blq.Total_Equity.val(self.period_real)
         res = net_income / total_equity
         return res
@@ -145,14 +156,14 @@ class IndicatorCalculation:
     @__null_handler
     def retained_earnings(self):
         dividends_payable = self.finsts.blq.Dividends_Payable.val(self.period_real)
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         res = 1 - (dividends_payable / net_income)
         return res
 
     @__null_handler
     def eps(self):
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         res = net_income / diluted_shares_outstanding
         return res
 
@@ -163,12 +174,12 @@ class IndicatorCalculation:
 
     @__null_handler_no_price_indicators
     def calc_sales_revenue(self):
-        res = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        res = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         return res
 
     @__null_handler_no_price_indicators
     def calc_gross_income(self):
-        res = self.finsts.isq.Gross_Income.quarter_year_val(self.period_real)
+        res = self.finsts.isq.Gross_Income.val_year_4q(self.period_real)
         return res
 
     @__null_handler_no_price_indicators
@@ -178,7 +189,7 @@ class IndicatorCalculation:
 
     @__null_handler_no_price_indicators
     def calc_ebitda(self):
-        res = self.finsts.isq.EBITDA.quarter_year_val(self.period_real)
+        res = self.finsts.isq.EBITDA.val_year_4q(self.period_real)
         return res
 
     @__null_handler_no_price_indicators
@@ -188,12 +199,12 @@ class IndicatorCalculation:
 
     @__null_handler_no_price_indicators
     def calc_net_income(self):
-        res = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        res = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         return res
 
     @__null_handler_no_price_indicators
     def calc_research_and_development(self):
-        res = self.finsts.isq.Research_Development.quarter_year_val(self.period_real)
+        res = self.finsts.isq.Research_Development.val_year_4q(self.period_real)
         return res
 
     @__null_handler_no_price_indicators
@@ -224,7 +235,7 @@ class IndicatorCalculation:
         # im większe ROE w stosunku do ROA tym większą dźwignię finansową stosuje firma
         # ograniczone zastosowanie bo różne wynik idla różnych branż (sprzyja bankom)
         # ogólnie powyzej 5% - dobrze, powyżej 20% - doskonale (jednak zawsze powinno być porównywane)
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         total_assets = self.finsts.baq.Total_Assets.val(self.period_real)
         res = net_income / total_assets
         return res
@@ -265,8 +276,8 @@ class IndicatorCalculation:
     @__null_handler_no_price_indicators
     def calc_gross_margin(self):
         # przychód po odjęciu tylko kosztów bezpośrednio związanych z wytworzeniem dóbr
-        gross_income = self.finsts.isq.Gross_Income.quarter_year_val(self.period_real)
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        gross_income = self.finsts.isq.Gross_Income.val_year_4q(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         res = gross_income / sales_revenue
         return res
 
@@ -274,8 +285,8 @@ class IndicatorCalculation:
     def calc_ebitda_margin(self):
         # przychód brutto po odjęciu dodatkowych kosztów administacyjnych, wydatków na badania
         # eliminuje wpływ polityki finansowej i księgowej
-        ebitda = self.finsts.isq.EBITDA.quarter_year_val(self.period_real)
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        ebitda = self.finsts.isq.EBITDA.val_year_4q(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         res = ebitda / sales_revenue
         return res
 
@@ -284,15 +295,15 @@ class IndicatorCalculation:
         # marża operacyjna
         # rentowność sprzedaży
         ebit = self.ebit()
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         res = ebit / sales_revenue
         return res
 
     @__null_handler_no_price_indicators
     def calc_net_margin(self):
         # marża netto
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         res = net_income / sales_revenue
         return res
 
@@ -331,7 +342,7 @@ class IndicatorCalculation:
         property_plant_equipment_gross_py = self.finsts.baq.Property_Plant_Equipment_Gross.val_prev_year(self.period_real)
         accumulated_depreciation_y = self.finsts.baq.Accumulated_Depreciation.val(self.period_real)
         accumulated_depreciation_py = self.finsts.baq.Accumulated_Depreciation.val_prev_year(self.period_real)
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
 
         capex = (property_plant_equipment_gross_y - property_plant_equipment_gross_py) + (accumulated_depreciation_y - accumulated_depreciation_py)
         res = capex / sales_revenue
@@ -343,24 +354,24 @@ class IndicatorCalculation:
         # powyżej -1.78 - jest manipulatorem
         accounts_receivables_net_y = self.finsts.baq.Accounts_Receivables_Net.val(self.period_real)
         accounts_receivables_net_py = self.finsts.baq.Accounts_Receivables_Net.val_prev_year(self.period_real)
-        sales_revenue_y = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
-        sales_revenue_py = self.finsts.isq.Sales_Revenue.previous_year_quarter_year_val(self.period_real)
-        cogs_exluding_d_a_y = self.finsts.isq.COGS_excluding_D_A.quarter_year_val(self.period_real)
-        cogs_exluding_d_a_py = self.finsts.isq.COGS_excluding_D_A.previous_year_quarter_year_val(self.period_real)
+        sales_revenue_y = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
+        sales_revenue_py = self.finsts.isq.Sales_Revenue.val_prev_year_4q(self.period_real)
+        cogs_exluding_d_a_y = self.finsts.isq.COGS_excluding_D_A.val_year_4q(self.period_real)
+        cogs_exluding_d_a_py = self.finsts.isq.COGS_excluding_D_A.val_prev_year_4q(self.period_real)
         total_current_assets_y = self.finsts.baq.Total_Current_Assets.val(self.period_real)
         total_current_assets_py = self.finsts.baq.Total_Current_Assets.val_prev_year(self.period_real)
         net_property_plant_equipment_y = self.finsts.baq.Net_Property_Plant_Equipment.val(self.period_real)
         net_property_plant_equipment_py = self.finsts.baq.Net_Property_Plant_Equipment.val_prev_year(self.period_real)
-        depreciation_y = self.finsts.isq.Depreciation.quarter_year_val(self.period_real)
-        depraciation_py = self.finsts.isq.Depreciation.previous_year_quarter_year_val(self.period_real)
-        sg_a_expense_y = self.finsts.isq.SG_A_Expense.quarter_year_val(self.period_real)
-        sg_a_expense_py = self.finsts.isq.SG_A_Expense.previous_year_quarter_year_val(self.period_real)
+        depreciation_y = self.finsts.isq.Depreciation.val_year_4q(self.period_real)
+        depraciation_py = self.finsts.isq.Depreciation.val_prev_year_4q(self.period_real)
+        sg_a_expense_y = self.finsts.isq.SG_A_Expense.val_year_4q(self.period_real)
+        sg_a_expense_py = self.finsts.isq.SG_A_Expense.val_prev_year_4q(self.period_real)
         total_current_liabilities_y = self.finsts.blq.Total_Current_Liabilities.val(self.period_real)
         total_current_liabilities_py = self.finsts.blq.Total_Current_Liabilities.val_prev_year(self.period_real)
         long_term_debt_y = self.finsts.blq.Long_Term_Debt.val(self.period_real)
         long_term_debt_py = self.finsts.blq.Long_Term_Debt.val_prev_year(self.period_real)
-        net_income_y = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
-        net_operationg_cash_flow_y = self.finsts.cfq.Net_Operating_Cash_Flow.quarter_year_val(self.period_real)
+        net_income_y = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        net_operationg_cash_flow_y = self.finsts.cfq.Net_Operating_Cash_Flow.val_year_4q(self.period_real)
         total_assets_y = self.finsts.baq.Total_Assets.val(self.period_real)
         total_assets_py = self.finsts.baq.Total_Assets.val_prev_year(self.period_real)
 
@@ -390,7 +401,7 @@ class IndicatorCalculation:
     @__null_handler_no_price_indicators
     def calc_debt_service_coverage_ratio(self):
         # brakuje principal payments w sprawozdaniach do pelnego obliczenia wskaznika
-        interest_expense = self.finsts.isq.Interest_Expense.quarter_year_val(self.period_real)
+        interest_expense = self.finsts.isq.Interest_Expense.val_year_4q(self.period_real)
         if interest_expense == 0:
             debt_service_coverage_ratio = None
         else:
@@ -407,7 +418,7 @@ class IndicatorCalculation:
 
     @__null_handler_no_price_indicators
     def calc_operating_cash_flow_debt_ratio(self):
-        net_operating_cash_flow = self.finsts.cfq.Net_Operating_Cash_Flow.quarter_year_val(self.period_real)
+        net_operating_cash_flow = self.finsts.cfq.Net_Operating_Cash_Flow.val_year_4q(self.period_real)
         short_term_debt = self.finsts.blq.Short_Term_Debt.val(self.period_real)
         long_term_debt = self.finsts.blq.Long_Term_Debt.val(self.period_real)
         res = net_operating_cash_flow / (short_term_debt + long_term_debt)
@@ -425,10 +436,52 @@ class IndicatorCalculation:
         res = (total_assets - total_current_liabilities)
         return res
 
+    @__null_handler_no_price_indicators
+    def calc_revenue_1y_growth(self):
+        current_year_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
+        prev_year_revenue = self.finsts.isq.Sales_Revenue.val_prev_year_4q(self.period_real)
+        res = round(current_year_revenue / prev_year_revenue - 1, 2)
+        return res
 
+    @__null_handler_no_price_indicators
+    def calc_revenue_2y_growth(self):
+        current_year_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
+        prev_2year_revenue = self.finsts.isq.Sales_Revenue.val_prev_2year_4q(self.period_real)
+        res = round(current_year_revenue / prev_2year_revenue - 1, 2)
+        return res
+
+    @__null_handler_no_price_indicators
+    def calc_revenue_3y_growth(self):
+        current_year_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
+        prev_3year_revenue = self.finsts.isq.Sales_Revenue.val_prev_3year_4q(self.period_real)
+        res = round(current_year_revenue / prev_3year_revenue - 1, 2)
+        return res
+
+    @__null_handler_no_price_indicators
+    def calc_net_income_1y_growth(self):
+        current_year_net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        prev_year_net_income = self.finsts.isq.Net_Income.val_prev_year_4q(self.period_real)
+        res = round(current_year_net_income / prev_year_net_income - 1, 2)
+        return res
+
+    @__null_handler_no_price_indicators
+    def calc_net_income_2y_growth(self):
+        current_year_net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        prev_2year_net_income = self.finsts.isq.Net_Income.val_prev_2year_4q(self.period_real)
+        res = round(current_year_net_income / prev_2year_net_income - 1, 2)
+        return res
+
+    @__null_handler_no_price_indicators
+    def calc_net_income_3y_growth(self):
+        current_year_net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        prev_3year_net_income = self.finsts.isq.Net_Income.val_prev_3year_4q(self.period_real)
+        res = round(current_year_net_income / prev_3year_net_income - 1, 2)
+        return res
 
 
     # price indicators
+
+
 
     @__null_handler_price_indicators
     def calc_price(self):
@@ -448,7 +501,7 @@ class IndicatorCalculation:
         # przychód jest tylko wtedy wartościowy gdy w pewnym momencie można go przełożyć na zyski
         # różne branże mają różne marże więc wysokość przychodów moze być myląca
         # nie uwzględnia zysku a więc problemu spłaty długu
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
         res = self.pv / (sales_revenue / diluted_shares_outstanding)
         return res
@@ -461,10 +514,10 @@ class IndicatorCalculation:
         total_current_assets = self.finsts.baq.Total_Current_Assets.val(self.period_real)
         total__current_liabilities = self.finsts.blq.Total_Current_Liabilities.val(self.period_real)
         total_assets = self.finsts.baq.Total_Assets.val(self.period_real)
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
         total_liabilities = self.finsts.blq.Total_Liabilities.val(self.period_real)
-        sales_revenue = self.finsts.isq.Sales_Revenue.quarter_year_val(self.period_real)
+        sales_revenue = self.finsts.isq.Sales_Revenue.val_year_4q(self.period_real)
 
         X = (total_current_assets - total__current_liabilities) / total_assets
         Y = net_income * self.retained_earnings() / total_assets
@@ -478,7 +531,7 @@ class IndicatorCalculation:
     @__null_handler_price_indicators
     def calc_p_e_ratio(self):
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
         res = self.pv * diluted_shares_outstanding / net_income
         return res
 
@@ -486,8 +539,8 @@ class IndicatorCalculation:
     def calc_peg(self):
         # Lynch
         # ponizej 1 dobrze
-        net_income = self.finsts.isq.Net_Income.quarter_year_val(self.period_real)
-        prev_net_income = self.finsts.isq.Net_Income.previous_year_quarter_year_val(self.period_real)
+        net_income = self.finsts.isq.Net_Income.val_year_4q(self.period_real)
+        prev_net_income = self.finsts.isq.Net_Income.val_prev_year_4q(self.period_real)
         diluted_shares_outstanding = self.finsts.isq.Diluted_Shares_Outstanding.val(self.period_real)
         net_income_growth = net_income / prev_net_income - 1
         p_e_ratio = self.pv * diluted_shares_outstanding / net_income
@@ -540,6 +593,12 @@ class IndicatorCalculation:
             self.calc_operating_cash_flow_debt_ratio()
             self.calc_basic_shares_outstanding()
             self.calc_capital_employed()
+            self.calc_revenue_1y_growth()
+            self.calc_revenue_2y_growth()
+            self.calc_revenue_3y_growth()
+            self.calc_net_income_1y_growth()
+            self.calc_net_income_2y_growth()
+            self.calc_net_income_3y_growth()
 
             self.df[period_real] = self.period_indicators_values_l
         table_type_name = 'no_price'
